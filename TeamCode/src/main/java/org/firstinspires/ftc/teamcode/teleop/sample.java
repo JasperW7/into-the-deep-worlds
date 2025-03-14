@@ -3,10 +3,10 @@ package org.firstinspires.ftc.teamcode.teleop;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.arcrobotics.ftclib.controller.PIDFController;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 
@@ -23,14 +23,14 @@ public class sample extends LinearOpMode{
     public double wristPar = 0.1, wristPerp = 0.62, wristOuttake = 0.82;
     public double clawOpen = 0.3, clawClose = 0.74;
     public double rotationPos = 0.46;
-    public double armDown = 50;
-    public double armPar = 80, armUp = 900;
+    public double armDown = 80;
+    public double armPar = 150, armUp = 900;
     public int slideInterval = 15;
     public double outToRestBuffer = 600, restToOuttake = 1000;
 
     //  ARM PID
     PIDFController armPIDF = new PIDFController(0,0,0, 0);
-    static double armP = 0.05, armI = 0, armD = 0.00081, armF = 0;
+    static double armP = 0.01, armI = 0, armD = 0.0005, armF = 0;
     static double armTarget = 0.0;
 
     //  SLIDES PID
@@ -67,7 +67,7 @@ public class sample extends LinearOpMode{
     double frontLeftPower, frontRightPower, backLeftPower, backRightPower;
     double armTempTarget = armPar;
     double armMax = 900;
-    double slideMax = 1350;
+    double slideMax = 1400;
 
     public enum Mode {
         REST,
@@ -212,7 +212,7 @@ public class sample extends LinearOpMode{
 //                    }
 //                }
                 slideTarget += (y > 0 && slideTarget < slideMax) ? 10 * y / 1.5 : 0;
-                slideTarget += (y < 0 && slideTarget > 300) ? 10 * y / 1.5 : 0;
+                slideTarget += (y < 0 && slideTarget > 100) ? 10 * y / 1.5 : 0;
                 if (gamepad1.left_trigger > 0 && rotationPos >= 0) {
                     rotationPos -= gamepad1.left_trigger / 40;
                     if (rotationPos < 0) rotationPos = 1; // Ensure upper bound
@@ -245,7 +245,7 @@ public class sample extends LinearOpMode{
                 if (switched) {
                     slideMax = 700;
                 } else {
-                    slideMax = 1350;
+                    slideMax = 1400;
                 }
             }
 
@@ -269,7 +269,7 @@ public class sample extends LinearOpMode{
 //  SLIDES
             slideTarget += (gamepad1.dpad_up && slideTarget < slideMax) ? slideInterval : 0;
             slideTarget -= (gamepad1.dpad_down && slideTarget > 500) ? slideInterval : 0;
-            slideTarget = Math.min(1350, Math.max(100, slideTarget));
+            slideTarget = Math.min(1400,Math.max(100, slideTarget));
 
             slideExtended = slideTarget > 300;
 
@@ -364,7 +364,7 @@ public class sample extends LinearOpMode{
                     init = false;
 
 
-                    if (slideRest && S1Motor.getCurrentPosition() - 50 < 500) { //distance from slide retracted
+                    if (slideRest && S1Motor.getCurrentPosition() < 120) { //distance from slide retracted
                         armTempTarget = armPar;
                         slideRest = false;
                         wrist.setPosition(wristPerp);
@@ -393,7 +393,7 @@ public class sample extends LinearOpMode{
                     if (init) {
                         wrist.setPosition(wristPar);
                         clawIsOpen = true;
-                        armTempTarget = armPar;
+                        armTempTarget = 150;
                         slideTarget = 400;
                         micro = true;
                     }
@@ -466,7 +466,11 @@ public class sample extends LinearOpMode{
 
 
     public double armPIDF(double target, DcMotorEx motor){
-        armPIDF.setPIDF(armP,armI,armD,armF);
+        if (mode == Mode.INTAKING){
+            armPIDF.setPIDF(0.06,armI,armD,armF);
+        }else {
+            armPIDF.setPIDF(armP, armI, armD, armF);
+        }
         int currentPosition = motor.getCurrentPosition();
         double output = armPIDF.calculate(currentPosition, target);
 
