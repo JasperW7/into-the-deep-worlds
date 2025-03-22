@@ -147,7 +147,6 @@ public class ExampleBucketAuto extends OpMode {
                 setPathState(1);
                 break;
             case 1:
-
                 /* You could check for
                 - Follower State: "if(!follower.isBusy() {}"
                 - Time: "if(pathTimer.getElapsedTimeSeconds() > 1) {}"
