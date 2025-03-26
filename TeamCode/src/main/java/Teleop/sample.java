@@ -302,6 +302,7 @@ public class sample extends LinearOpMode{
                     init = true;
                 } else if (mode == Mode.INTAKING) {
                     wrist.setPosition(wristPerp);
+                    pusher.setPosition(pusherClose);
                     micro = false;
                     mode = Mode.REST;
                     init = true;
@@ -360,6 +361,7 @@ public class sample extends LinearOpMode{
             }
             hangPrev = hangCurr;
 
+
 //            if (firstRun) {
 //                if (firstRun1) {
 //                    armTarget = 1000;
@@ -406,6 +408,7 @@ public class sample extends LinearOpMode{
 
                     boolean intakeCurr = gamepad1.left_bumper;
                     if (intakeCurr && !intakePrev) {
+                        pusher.setPosition(pusherOpen);
                         micro = true;
                         rotationPos = 0.5;
                         slideTarget = 400;
