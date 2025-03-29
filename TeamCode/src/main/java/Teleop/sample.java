@@ -2,13 +2,17 @@ package Teleop;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.arcrobotics.ftclib.controller.PIDFController;
+import com.arcrobotics.ftclib.hardware.ServoEx;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.qualcomm.robotcore.hardware.ServoImplEx;
 
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -18,25 +22,27 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 public class sample extends LinearOpMode{
 
     DcMotorEx AMotor, S1Motor, S2Motor, FL, FR, BL, BR = null;
-    Servo rotation, wrist, claw,hangL,hangR,pusher;
+    Servo rotation, wrist, claw,pusher,hangL,hangR;
 
+    Limelight3A limelight;
     public double wristPar = 0.1, wristPerp = 0.62, wristOuttake = 0.82;
-    public double clawOpen = 0.3, clawClose = 0.74;
+    public double clawOpen =  0.3, clawClose = 0.74;
     public double rotationPos = 0.46;
     public double pusherClose = 0.98, pusherOpen = 0;
-    public double armDown = 80;
-    public double armPar = 150, armUp = 900;
+    public double armDown = 25;
+    public double armPar = 100, armUp = 890;
     public int slideInterval = 15;
     public double outToRestBuffer = 600, restToOuttake = 1000;
 
     //  ARM PID
     PIDFController armPIDF = new PIDFController(0,0,0, 0);
-    static double armP = 0.01, armI = 0, armD = 0.0005, armF = 0;
+    static double armP = 0.03, armI = 0, armD = 0, armF = 0;
+    static double armPE = 0.01, armIE = 0, armDE = 0, armFE = 0.005;
     static double armTarget = 0.0;
 
     //  SLIDES PID
     PIDFController slidePIDF = new PIDFController(0,0,0, 0);
-    static double slideP = 0.023, slideI = 0, slideD = 0, slideF = 0;
+    static double slideP = 0.017, slideI = 0, slideD = 0.00018, slideF = 0;
     //    static double slidePE = 0.008, slideIE = 0, slideDE = 0.00018, slideFE = 0;
     static double slideTarget = 0.0;
     double slidePower = 0.0;
@@ -67,7 +73,7 @@ public class sample extends LinearOpMode{
 
     double frontLeftPower, frontRightPower, backLeftPower, backRightPower;
     double armTempTarget = armPar;
-    double armMax = 900;
+    double armMax = 890;
     double slideMax = 1400;
 
     public enum Mode {
@@ -88,6 +94,8 @@ public class sample extends LinearOpMode{
         FR = hardwareMap.get(DcMotorEx.class,"FR");
         BL = hardwareMap.get(DcMotorEx.class,"BL");
         BR = hardwareMap.get(DcMotorEx.class,"BR");
+
+        limelight = hardwareMap.get(Limelight3A.class,"limelight");
 
 
         rotation = hardwareMap.get(Servo.class,"rotation");
@@ -129,6 +137,9 @@ public class sample extends LinearOpMode{
         S2Motor.setPower(0);
         armTarget = 100;
         slideTarget = 70;
+        limelight.close();
+        pwmDisable(hangL);
+        pwmDisable(hangR);
 
 //
 //        armTarget = 700;
@@ -215,14 +226,14 @@ public class sample extends LinearOpMode{
 //                        rotation.setPosition(1 - (Math.acos(x / (Math.pow(Math.pow(x, 2) + Math.pow(y, 2), 0.5))) / Math.PI));
 //                    }
 //                }
-                slideTarget += (y > 0 && slideTarget < slideMax) ? 10 * y / 1.5 : 0;
-                slideTarget += (y < 0 && slideTarget > 100) ? 10 * y / 1.5 : 0;
+                slideTarget += (y > 0 && slideTarget < slideMax) ? 30 * y / 1.5 : 0;
+                slideTarget += (y < 0 && slideTarget > 100) ? 30 * y / 1.5 : 0;
                 if (gamepad1.left_trigger > 0 && rotationPos >= 0) {
-                    rotationPos -= gamepad1.left_trigger / 40;
+                    rotationPos -= gamepad1.left_trigger / 20;
                     if (rotationPos < 0) rotationPos = 1; // Ensure upper bound
                 }
                 if (gamepad1.right_trigger > 0 && rotationPos <= 1) {
-                    rotationPos += gamepad1.right_trigger / 40;
+                    rotationPos += gamepad1.right_trigger / 20;
                     if (rotationPos > 1) rotationPos = 0; // Ensure lower bound
                 }
                 rotation.setPosition(rotationPos);
@@ -281,7 +292,7 @@ public class sample extends LinearOpMode{
 
             armTempTarget += (gamepad1.left_trigger > 0 && !micro) ? 3 : 0;
             armTempTarget -= (gamepad1.right_trigger > 0 && !micro) ? 3 : 0;
-            armTempTarget = Math.min(900, Math.max(0, armTempTarget));
+            armTempTarget = Math.min(890, Math.max(0, armTempTarget));
 
 
 //             /\_/\
@@ -337,15 +348,21 @@ public class sample extends LinearOpMode{
 
             if (toHang){
                 if (hanging){
-                    hangL.setPosition(0.52);
-                    hangR.setPosition(0.46);
+                    hangL.setPosition(0.7);
+                    hangR.setPosition(0.3 );
                 }else {
+                    pwmEnable(hangL);
+                    pwmEnable(hangR);
                     hangL.setPosition(1);
                     hangR.setPosition(0);
                 }
             }else{
-                hangL.setPosition(0.5);
-                hangR.setPosition(0.5);
+                pwmDisable(hangL);
+                pwmDisable(hangR);
+                hangL.setPosition(.5);
+                hangR.setPosition(.5);
+
+
             }
 
 
@@ -424,7 +441,7 @@ public class sample extends LinearOpMode{
                     if (init) {
                         wrist.setPosition(wristPar);
                         clawIsOpen = true;
-                        armTempTarget = 150;
+                        armTempTarget = 100;
                         slideTarget = 400;
                         micro = true;
                     }
@@ -432,7 +449,11 @@ public class sample extends LinearOpMode{
 
 
                     //  LOWER ARM
-                    armTarget = (gamepad1.left_bumper) ? armDown : armTempTarget;
+                    if (gamepad1.left_bumper){
+                        armTarget = armDown;
+                    }else{
+                        armTarget = armTempTarget;
+                    }
 
 
                     break;
@@ -498,7 +519,7 @@ public class sample extends LinearOpMode{
 
     public double armPIDF(double target, DcMotorEx motor){
         if (mode == Mode.INTAKING){
-            armPIDF.setPIDF(0.06,armI,armD,0.003);
+            armPIDF.setPIDF(armPE,armIE,armDE,armFE);
         }else {
             armPIDF.setPIDF(armP, armI, armD, armF);
         }
@@ -516,5 +537,19 @@ public class sample extends LinearOpMode{
 
         return output;
     }
-
+    public void pwmDisable(Servo servo) {
+        if (servo instanceof PwmControl) {
+            ((PwmControl) servo).setPwmDisable();
+        } else {
+            throw new UnsupportedOperationException("This servo does not support pwmDisable.");
+        }
+    }
+    public void pwmEnable(Servo servo) {
+        if (servo instanceof PwmControl) {
+            ((PwmControl) servo).setPwmEnable();
+        } else {
+            throw new UnsupportedOperationException("This servo does not support pwmDisable.");
+        }
+    }
 }
+
