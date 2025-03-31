@@ -1,5 +1,6 @@
 package Auton;
 
+import com.arcrobotics.ftclib.controller.PIDFController;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.localization.Pose;
 import com.pedropathing.pathgen.BezierCurve;
@@ -9,9 +10,15 @@ import com.pedropathing.pathgen.PathChain;
 import com.pedropathing.pathgen.Point;
 import com.pedropathing.util.Constants;
 import com.pedropathing.util.Timer;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 
+import Teleop.sample;
 import pedroPathing.constants.FConstants;
 import pedroPathing.constants.LConstants;
 
@@ -27,13 +34,35 @@ import pedroPathing.constants.LConstants;
 
 @Autonomous(name = "Sample", group = "Autonomous")
 public class sampAuton extends OpMode {
-
+    private DcMotorEx AMotor,S1Motor,S2Motor;
+    private Servo wrist,claw,rotation;
     private Follower follower;
     private Timer pathTimer, actionTimer, opmodeTimer;
 
+    public double wristPar = 0.1, wristPerp = 0.62, wristOuttake = 0.82;
+    public double clawOpen =  0.3, clawClose = 0.74;
+    public double rotationPos = 0.46;
+    public double armDown = 25;
+    public double armPar = 100, armUp = 890, slidePar = 100,slideUp = 1400;
+    public int slideInterval = 15;
+    public double outToRestBuffer = 600, restToOuttake = 1000;
+    public boolean intaking = false;
+    //  ARM PID
+    PIDFController armPIDF = new PIDFController(0,0,0, 0);
+    static double armP = 0.03, armI = 0, armD = 0, armF = 0;
+    static double armPE = 0.01, armIE = 0, armDE = 0, armFE = 0.005;
+    static double armTarget = 0.0;
+
+    //  SLIDES PID
+    PIDFController slidePIDF = new PIDFController(0,0,0, 0);
+    static double slideP = 0.017, slideI = 0, slideD = 0.00018, slideF = 0;
+    //    static double slidePE = 0.008, slideIE = 0, slideDE = 0.00018, slideFE = 0;
+    static double slideTarget = 0.0;
+    double slidePower = 0.0;
+
     /** This is the variable where we store the state of our auto.
      * It is used by the pathUpdate method. */
-    private int pathState;
+    private int pathState,actionState;
 
     /* Create and Define Poses + Paths
      * Poses are built with three constructors: x, y, and heading (in Radians).
@@ -89,63 +118,120 @@ public class sampAuton extends OpMode {
          * PathChains hold Path(s) within it and are able to hold their end point, meaning that they will holdPoint until another path is followed.
          * Here is a explanation of the difference between Paths and PathChains <https://pedropathing.com/commonissues/pathtopathchain.html> */
 
-        /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
         scorePreload = new Path(new BezierLine(new Point(startPose), new Point(scorePose)));
         scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
 
-        /* Here is an example for Constant Interpolation
-        scorePreload.setConstantInterpolation(startPose.getHeading()); */
 
-        /* This is our grabPickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         grabPickup1 = follower.pathBuilder()
                 .addPath(new BezierLine(new Point(scorePose),   new Point(pickup1Pose)))
                 .setLinearHeadingInterpolation(scorePose.getHeading(), pickup1Pose.getHeading())
                 .build();
 
-        /* This is our scorePickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup1 = follower.pathBuilder()
                 .addPath(new BezierLine(new Point(pickup1Pose), new Point(scorePose)))
                 .setLinearHeadingInterpolation(pickup1Pose.getHeading(), scorePose.getHeading())
                 .build();
 
-        /* This is our grabPickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         grabPickup2 = follower.pathBuilder()
                 .addPath(new BezierLine(new Point(scorePose), new Point(pickup2Pose)))
                 .setLinearHeadingInterpolation(scorePose.getHeading(), pickup2Pose.getHeading())
                 .build();
 
-        /* This is our scorePickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup2 = follower.pathBuilder()
                 .addPath(new BezierLine(new Point(pickup2Pose), new Point(scorePose)))
                 .setLinearHeadingInterpolation(pickup2Pose.getHeading(), scorePose.getHeading())
                 .build();
 
-        /* This is our grabPickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         grabPickup3 = follower.pathBuilder()
                 .addPath(new BezierLine(new Point(scorePose), new Point(pickup3Pose)))
                 .setLinearHeadingInterpolation(scorePose.getHeading(), pickup3Pose.getHeading())
                 .build();
 
-        /* This is our scorePickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup3 = follower.pathBuilder()
                 .addPath(new BezierLine(new Point(pickup3Pose), new Point(scorePose)))
                 .setLinearHeadingInterpolation(pickup3Pose.getHeading(), scorePose.getHeading())
                 .build();
 
-        /* This is our park path. We are using a BezierCurve with 3 points, which is a curved line that is curved based off of the control point */
-        park = new Path(new BezierCurve(new Point(scorePose), /* Control Point */ new Point(parkControlPose), new Point(parkPose)));
+        park = new Path(new BezierCurve(new Point(scorePose), new Point(parkControlPose), new Point(parkPose)));
         park.setLinearHeadingInterpolation(scorePose.getHeading(), parkPose.getHeading());
     }
 
-    /** This switch is called continuously and runs the pathing, at certain points, it triggers the action state.
-     * Everytime the switch changes case, it will reset the timer. (This is because of the setPathState() method)
-     * The followPath() function sets the follower to run the specific path, but does NOT wait for it to finish before moving on. */
-    public void autonomousPathUpdate() {
+    //ACTIONS
+    public void RestToOuttaking(){
+        AMotor.setPower(armPIDF(armUp,AMotor));
+        if (AMotor.getCurrentPosition()>700){
+            S1Motor.setPower(slidePIDF(slideUp,S1Motor,S2Motor));
+            S2Motor.setPower(slidePIDF(slideUp,S1Motor,S2Motor));
+        }
+    }
+
+    public void OuttakingToRest(){
+        S1Motor.setPower(slidePIDF(slidePar,S1Motor,S2Motor));
+        S2Motor.setPower(slidePIDF(slidePar,S1Motor,S2Motor));
+        if (S1Motor.getCurrentPosition()<120){
+            AMotor.setPower(armPIDF(armPar,AMotor));
+        }
+    }
+
+    public void WristOuttaking(){
+        wrist.setPosition(wristOuttake);
+    }
+    public void WristPar(){
+        wrist.setPosition(wristPar);
+    }
+    public void WristPerp(){
+        wrist.setPosition(wristPerp);
+    }
+
+    public void ClawClose(){
+        claw.setPosition(clawClose);
+    }
+    public void ClawOpen(){
+        claw.setPosition(clawOpen);
+    }
+
+
+
+public void autonomousPathUpdate() {
         switch (pathState) {
             case 0:
-                follower.followPath(scorePreload);
-                setPathState(1);
+                switch (actionState){
+                    case 0:
+                        RestToOuttaking();
+                        follower.followPath(scorePreload);
+                        setActionState(1);
+                        break;
+                    case 1:
+                        if (!follower.isBusy()){
+                            WristOuttaking();
+                        }
+                        setActionState(2);
+                        break;
+                    case 2:
+                        if (actionTimer.getElapsedTimeSeconds()>.2){
+                            ClawOpen();
+                        }
+                        setActionState(3);
+                        break;
+                    case 3:
+                        if (actionTimer.getElapsedTimeSeconds()>.3){
+                            WristPar();
+                            OuttakingToRest();
+
+                        }
+                        setActionState(4);
+                        break;
+                    case 4:
+                        if (AMotor.getCurrentPosition()<300){
+                            WristPerp();
+                            follower.followPath(grabPickup1,true);
+                            setActionState(0);
+                            setPathState(1);
+                        }
+                        break;
+                }
                 break;
+
             case 1:
                 /* You could check for
                 - Follower State: "if(!follower.isBusy() {}"
@@ -241,6 +327,11 @@ public class sampAuton extends OpMode {
         pathTimer.resetTimer();
     }
 
+    public void setActionState(int aState){
+        actionState = aState;
+        actionTimer.resetTimer();
+    }
+
     /** This is the main loop of the OpMode, it will run repeatedly after clicking "Play". **/
     @Override
     public void loop() {
@@ -260,6 +351,15 @@ public class sampAuton extends OpMode {
     /** This method is called once at the init of the OpMode. **/
     @Override
     public void init() {
+        AMotor = hardwareMap.get(DcMotorEx.class,"AMotor");
+        S1Motor = hardwareMap.get(DcMotorEx.class,"S1Motor");
+        S2Motor = hardwareMap.get(DcMotorEx.class,"S2Motor");
+
+        wrist = hardwareMap.get(Servo.class,"wrist");
+        rotation = hardwareMap.get(Servo.class,"rotation");
+        claw = hardwareMap.get(Servo.class,"claw");
+
+        Limelight3A limelight = hardwareMap.get(Limelight3A.class,"limelight");
         pathTimer = new Timer();
         opmodeTimer = new Timer();
         opmodeTimer.resetTimer();
@@ -268,6 +368,30 @@ public class sampAuton extends OpMode {
         follower = new Follower(hardwareMap);
         follower.setStartingPose(startPose);
         buildPaths();
+
+        AMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        S1Motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        S2Motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        AMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        AMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        AMotor.setPower(0);
+
+        S1Motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        S1Motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        S1Motor.setPower(0);
+
+        S2Motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        S2Motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        S2Motor.setPower(0);
+
+        AMotor.setPower(armPIDF(armPar,AMotor));
+        S1Motor.setPower(slidePIDF(slidePar,S1Motor,S2Motor));
+        S2Motor.setPower(slidePIDF(slidePar,S1Motor,S2Motor));
+
+        wrist.setPosition(wristPerp);
+        rotation.setPosition(rotationPos);
+        claw.setPosition(clawClose);
     }
 
     /** This method is called continuously after Init while waiting for "play". **/
@@ -280,11 +404,33 @@ public class sampAuton extends OpMode {
     public void start() {
         opmodeTimer.resetTimer();
         setPathState(0);
+        setActionState(0);
     }
 
     /** We do not use this because everything should automatically disable **/
     @Override
     public void stop() {
+    }
+
+    public double armPIDF(double target, DcMotorEx motor){
+        if (intaking){
+            armPIDF.setPIDF(armPE,armIE,armDE,armFE);
+        }else {
+            armPIDF.setPIDF(armP, armI, armD, armF);
+        }
+        int currentPosition = motor.getCurrentPosition();
+        double output = armPIDF.calculate(currentPosition, target);
+
+        return output;
+    }
+
+    public double slidePIDF(double target, DcMotorEx motor,DcMotorEx motor2){
+        slidePIDF.setPIDF(slideP, slideI, slideD, slideF);
+        int currentPosition = (motor.getCurrentPosition()+motor2.getCurrentPosition())/2;
+        double output = slidePIDF.calculate(currentPosition, target);
+
+
+        return output;
     }
 }
 

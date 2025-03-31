@@ -137,7 +137,7 @@ public class sample extends LinearOpMode{
         S2Motor.setPower(0);
         armTarget = 100;
         slideTarget = 70;
-        limelight.close();
+        limelight.stop();
         pwmDisable(hangL);
         pwmDisable(hangR);
 
