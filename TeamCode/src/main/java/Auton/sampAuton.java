@@ -157,20 +157,26 @@ public class sampAuton extends OpMode {
     }
 
     //ACTIONS
-    public void RestToOuttaking(){
-        AMotor.setPower(armPIDF(armUp,AMotor));
+    public boolean RestToOuttaking(){
+        armTarget = armUp;
         if (AMotor.getCurrentPosition()>700){
-            S1Motor.setPower(slidePIDF(slideUp,S1Motor,S2Motor));
-            S2Motor.setPower(slidePIDF(slideUp,S1Motor,S2Motor));
+            slideTarget = slideUp;
+            if (S1Motor.getCurrentPosition()>1300) {
+                return true;
+            }
         }
+        return false;
     }
 
-    public void OuttakingToRest(){
-        S1Motor.setPower(slidePIDF(slidePar,S1Motor,S2Motor));
-        S2Motor.setPower(slidePIDF(slidePar,S1Motor,S2Motor));
+    public boolean OuttakingToRest(){
+        slideTarget = slidePar;
         if (S1Motor.getCurrentPosition()<120){
-            AMotor.setPower(armPIDF(armPar,AMotor));
+            armTarget = armPar;
+            if (AMotor.getCurrentPosition()<100){
+                return true;
+            }
         }
+        return false;
     }
 
     public void WristOuttaking(){
@@ -195,42 +201,11 @@ public class sampAuton extends OpMode {
 public void autonomousPathUpdate() {
         switch (pathState) {
             case 0:
-                switch (actionState){
-                    case 0:
-                        RestToOuttaking();
-                        follower.followPath(scorePreload);
-                        setActionState(1);
-                        break;
-                    case 1:
-                        if (!follower.isBusy()){
-                            WristOuttaking();
-                        }
-                        setActionState(2);
-                        break;
-                    case 2:
-                        if (actionTimer.getElapsedTimeSeconds()>.2){
-                            ClawOpen();
-                        }
-                        setActionState(3);
-                        break;
-                    case 3:
-                        if (actionTimer.getElapsedTimeSeconds()>.3){
-                            WristPar();
-                            OuttakingToRest();
-
-                        }
-                        setActionState(4);
-                        break;
-                    case 4:
-                        if (AMotor.getCurrentPosition()<300){
-                            WristPerp();
-                            follower.followPath(grabPickup1,true);
-                            setActionState(0);
-                            setPathState(1);
-                        }
-                        break;
+                follower.followPath(scorePreload);
+                if (actionState == 4){
+                    setPathState(1);
+                    break;
                 }
-                break;
 
             case 1:
                 /* You could check for
@@ -318,6 +293,32 @@ public void autonomousPathUpdate() {
                 }
                 break;
         }
+
+        switch (actionState){
+            case 0:
+                if (RestToOuttaking()){
+                    setActionState(1);
+                    break;
+                }
+            case 1:
+                WristOuttaking();
+                if (actionTimer.getElapsedTimeSeconds()>0.2) {
+                    setActionState(2);
+                    break;
+                }
+            case 2:
+                ClawOpen();
+                if(actionTimer.getElapsedTimeSeconds()>0.3){
+                    setActionState(3);
+                    break;
+                }
+            case 3:
+                if (OuttakingToRest()){
+                    setActionState(4);
+                    break;
+                }
+
+        }
     }
 
     /** These change the states of the paths and actions
@@ -339,7 +340,9 @@ public void autonomousPathUpdate() {
         // These loop the movements of the robot
         follower.update();
         autonomousPathUpdate();
-
+        AMotor.setPower(armPIDF(armTarget,AMotor));
+        S1Motor.setPower(slidePIDF(slideTarget,S1Motor,S2Motor));
+        S2Motor.setPower(slidePIDF(slideTarget,S1Motor,S2Motor));
         // Feedback to Driver Hub
         telemetry.addData("path state", pathState);
         telemetry.addData("x", follower.getPose().getX());
