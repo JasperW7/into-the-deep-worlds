@@ -89,7 +89,7 @@ public class sampAuton extends OpMode {
     private final Pose pickup3Pose = new Pose(30, 128, Math.toRadians(30));
 
     /** Park Pose for our robot, after we do all of the scoring. */
-    private final Pose parkPose = new Pose(60, 98, Math.toRadians(90));
+    private final Pose parkPose = new Pose(60, 98, Math.toRadians(270));
 
     /** Park Control Pose for our robot, this is used to manipulate the bezier curve that we will create for the parking.
      * The Robot will not go to this pose, it is used a control point for our bezier curve. */
@@ -179,6 +179,36 @@ public class sampAuton extends OpMode {
         return false;
     }
 
+    public boolean SlideOut(){
+        slideTarget = 300;
+        intaking = true;
+        if (S1Motor.getCurrentPosition()>250){
+            return true;
+        }
+        return false;
+    }
+    public boolean ArmDown(){
+        armTarget = armDown;
+        if (AMotor.getCurrentPosition()<armDown+5){
+            return true;
+        }
+        return false;
+    }
+
+    public boolean ToRest(){
+        armTarget = armPar;
+        if (AMotor.getCurrentPosition()>armPar-10){
+            slideTarget = slidePar;
+            WristOuttaking();
+            if (S1Motor.getCurrentPosition()>slidePar-25){
+                return true;
+            }
+        }
+        return false;
+
+    }
+
+
     public void WristOuttaking(){
         wrist.setPosition(wristOuttake);
     }
@@ -194,6 +224,13 @@ public class sampAuton extends OpMode {
     }
     public void ClawOpen(){
         claw.setPosition(clawOpen);
+    }
+
+    public void RotationSpecial(){
+        rotation.setPosition(0.9);
+    }
+    public void RotationNormal(){
+        rotation.setPosition(rotationPos);
     }
 
 
@@ -220,7 +257,9 @@ public void autonomousPathUpdate() {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
                     follower.followPath(grabPickup1,true);
-                    setPathState(2);
+                    if (actionState == 7) {
+                        setPathState(2);
+                    }
                 }
                 break;
             case 2:
@@ -230,7 +269,9 @@ public void autonomousPathUpdate() {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
                     follower.followPath(scorePickup1,true);
-                    setPathState(3);
+                    if (actionState == 11) {
+                        setPathState(3);
+                    }
                 }
                 break;
             case 3:
@@ -240,7 +281,9 @@ public void autonomousPathUpdate() {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
                     follower.followPath(grabPickup2,true);
-                    setPathState(4);
+                    if(actionState == 14) {
+                        setPathState(4);
+                    }
                 }
                 break;
             case 4:
@@ -250,7 +293,9 @@ public void autonomousPathUpdate() {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
                     follower.followPath(scorePickup2,true);
-                    setPathState(5);
+                    if(actionState == 18) {
+                        setPathState(5);
+                    }
                 }
                 break;
             case 5:
@@ -260,7 +305,9 @@ public void autonomousPathUpdate() {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
                     follower.followPath(grabPickup3,true);
-                    setPathState(6);
+                    if (actionState == 21) {
+                        setPathState(6);
+                    }
                 }
                 break;
             case 6:
@@ -270,7 +317,9 @@ public void autonomousPathUpdate() {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
                     follower.followPath(scorePickup3, true);
-                    setPathState(7);
+                    if (actionState == 25) {
+                        setPathState(7);
+                    }
                 }
                 break;
             case 7:
@@ -296,27 +345,159 @@ public void autonomousPathUpdate() {
 
         switch (actionState){
             case 0:
+                WristPar();
                 if (RestToOuttaking()){
-                    setActionState(1);
-                    break;
-                }
-            case 1:
-                WristOuttaking();
-                if (actionTimer.getElapsedTimeSeconds()>0.2) {
                     setActionState(2);
                     break;
                 }
             case 2:
-                ClawOpen();
-                if(actionTimer.getElapsedTimeSeconds()>0.3){
-                    setActionState(3);
-                    break;
+                if(!follower.isBusy()) {
+                    WristOuttaking();
+                    ClawOpen();
+                    if (actionTimer.getElapsedTimeSeconds() > 0.3) {
+                        setActionState(3);
+                        break;
+                    }
                 }
             case 3:
+                WristPar();
                 if (OuttakingToRest()){
                     setActionState(4);
                     break;
                 }
+            case 4:
+                if (SlideOut()){
+                    setActionState(5);
+                    break;
+                }
+            case 5:
+                if (!follower.isBusy()){
+                    if (ArmDown()){
+                        setActionState(6);
+                        break;
+                    }
+                }
+            case 6:
+                ClawClose();
+                if (actionTimer.getElapsedTimeSeconds()>.2){
+                    setActionState(7);
+                    break;
+                }
+            case 7:
+                if (ToRest()){
+                    setActionState(8);
+                    break;
+                }
+            case 8:
+                if (RestToOuttaking()){
+                    setActionState(9);
+                    break;
+                }
+            case 9:
+                if (!follower.isBusy()){
+                    WristOuttaking();
+                    ClawOpen();
+                    if (actionTimer.getElapsedTimeSeconds()>.3){
+                        setActionState(10);
+                        break;
+                    }
+                }
+            case 10:
+                WristPar();
+                if(OuttakingToRest()){
+                    setActionState(11);
+                    break;
+                }
+            case 11:
+                if (SlideOut()){
+                    setActionState(12);
+                    break;
+                }
+            case 12:
+                if(!follower.isBusy()) {
+                    if (ArmDown()) {
+                        setActionState(13);
+                        break;
+                    }
+                }
+            case 13:
+                ClawClose();
+                if (actionTimer.getElapsedTimeSeconds()>.2){
+                    setActionState(14);
+                    break;
+                }
+            case 14:
+                if (ToRest()){
+                    setActionState(15);
+                    break;
+                }
+            case 15:
+                if (RestToOuttaking()){
+                    setActionState(16);
+                    break;
+                }
+            case 16:
+                if (!follower.isBusy()){
+                    WristOuttaking();
+                    ClawOpen();
+                    if (actionTimer.getElapsedTimeSeconds()>.3){
+                        setActionState(17);
+                        break;
+                    }
+                }
+            case 17:
+                WristPar();
+                if(OuttakingToRest()){
+                    setActionState(18);
+                    break;
+                }
+            case 18:
+                RotationSpecial();
+                if (SlideOut()){
+                    setActionState(19);
+                    break;
+                }
+            case 19:
+                if (!follower.isBusy()){
+                    if (ArmDown()){
+                        setActionState(20);
+                        break;
+                    }
+                }
+            case 20:
+                ClawClose();
+                if (actionTimer.getElapsedTimeSeconds()>.2){
+                    setActionState(21);
+                    break;
+                }
+            case 21:
+                RotationNormal();
+                if (ToRest()){
+                    setActionState(22);
+                    break;
+                }
+            case 22:
+                if(RestToOuttaking()){
+                    setActionState(23);
+                    break;
+                }
+            case 23:
+                if(!follower.isBusy()){
+                    WristOuttaking();
+                    ClawOpen();
+                    if (actionTimer.getElapsedTimeSeconds()>.3){
+                        setActionState(24);
+                        break;
+                    }
+                }
+            case 24:
+                WristPar();
+                if(OuttakingToRest()){
+                    setActionState(25);
+                }
+
+
+
 
         }
     }
@@ -345,6 +526,7 @@ public void autonomousPathUpdate() {
         S2Motor.setPower(slidePIDF(slideTarget,S1Motor,S2Motor));
         // Feedback to Driver Hub
         telemetry.addData("path state", pathState);
+        telemetry.addData("action state",actionState);
         telemetry.addData("x", follower.getPose().getX());
         telemetry.addData("y", follower.getPose().getY());
         telemetry.addData("heading", follower.getPose().getHeading());
