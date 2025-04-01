@@ -30,7 +30,7 @@ public class sample extends LinearOpMode{
     public double rotationPos = 0.46;
     public double pusherClose = 0.98, pusherOpen = 0;
     public double armDown = 25;
-    public double armPar = 100, armUp = 890;
+    public double armPar = 150, armUp = 890;
     public int slideInterval = 15;
     public double outToRestBuffer = 600, restToOuttake = 1000;
 
@@ -333,38 +333,54 @@ public class sample extends LinearOpMode{
                 }
             }
             switchPrev = switchCurr;
-
-            boolean hangYCurr = gamepad1.y;
-            if (hangYCurr && !hangYPrev){
-                toHang = !toHang;
-            }
-            hangYPrev = hangYCurr;
-
-            boolean hangBCurr = gamepad1.b;
-            if (hangBCurr && !hangBPrev){
-                hanging = !hanging;
-            }
-            hangBPrev = hangBCurr;
-
-            if (toHang){
-                if (hanging){
-                    hangL.setPosition(0.7);
-                    hangR.setPosition(0.3 );
-                }else {
-                    pwmEnable(hangL);
-                    pwmEnable(hangR);
-                    hangL.setPosition(1);
-                    hangR.setPosition(0);
-                }
+//
+//            boolean hangYCurr = gamepad1.y;
+//            if (hangYCurr && !hangYPrev){
+//                toHang = !toHang;
+//            }
+//            hangYPrev = hangYCurr;
+//
+//            boolean hangBCurr = gamepad1.b;
+//            if (hangBCurr && !hangBPrev){
+//                hanging = !hanging;
+//            }
+//            hangBPrev = hangBCurr;
+//
+//            if (toHang){
+//                if (hanging){
+//                    hangL.setPosition(0.7);
+//                    hangR.setPosition(0.3 );
+//                }else {
+//                    pwmEnable(hangL);
+//                    pwmEnable(hangR);
+//                    hangL.setPosition(1);
+//                    hangR.setPosition(0);
+//                }
+//            }else{
+//                pwmDisable(hangL);
+//                pwmDisable(hangR);
+//                hangL.setPosition(.5);
+//                hangR.setPosition(.5);
+//
+//
+//            }
+            if (gamepad1.y){
+                pwmEnable(hangL);
+                pwmEnable(hangR);
+                hangL.setPosition(1);
+                hangR.setPosition(0);
+            }else if (gamepad1.b){
+                pwmEnable(hangL);
+                pwmEnable(hangR);
+                hangL.setPosition(0);
+                hangR.setPosition(1);
             }else{
                 pwmDisable(hangL);
                 pwmDisable(hangR);
-                hangL.setPosition(.5);
-                hangR.setPosition(.5);
-
+                hangL.setPosition(0.5);
+                hangR.setPosition(0.5);
 
             }
-
 
             boolean hangCurr = gamepad1.left_stick_button;
             if (hangCurr && !hangPrev) {
@@ -441,7 +457,7 @@ public class sample extends LinearOpMode{
                     if (init) {
                         wrist.setPosition(wristPar);
                         clawIsOpen = true;
-                        armTempTarget = 100;
+                        armTempTarget = 150;
                         slideTarget = 400;
                         micro = true;
                     }

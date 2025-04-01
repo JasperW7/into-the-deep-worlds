@@ -546,6 +546,7 @@ public void autonomousPathUpdate() {
 
         Limelight3A limelight = hardwareMap.get(Limelight3A.class,"limelight");
         pathTimer = new Timer();
+        actionTimer = new Timer();
         opmodeTimer = new Timer();
         opmodeTimer.resetTimer();
 
@@ -569,14 +570,13 @@ public void autonomousPathUpdate() {
         S2Motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         S2Motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         S2Motor.setPower(0);
-
-        AMotor.setPower(armPIDF(armPar,AMotor));
-        S1Motor.setPower(slidePIDF(slidePar,S1Motor,S2Motor));
-        S2Motor.setPower(slidePIDF(slidePar,S1Motor,S2Motor));
-
+        armTarget = armPar;
+        slideTarget = slidePar;
         wrist.setPosition(wristPerp);
         rotation.setPosition(rotationPos);
         claw.setPosition(clawClose);
+
+
     }
 
     /** This method is called continuously after Init while waiting for "play". **/
