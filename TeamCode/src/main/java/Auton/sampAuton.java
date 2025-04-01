@@ -354,18 +354,22 @@ public void autonomousPathUpdate() {
             case 0:
                 WristPar();
                 if (RestToOuttaking()){
-                    setActionState(2);
-                    break;
-                }
-            case 2:
+                    setActionState(1);
+
+                }break;
+            case 1:
                 if(!follower.isBusy()) {
                     WristOuttaking();
-                    ClawOpen();
                     if (actionTimer.getElapsedTimeSeconds() > 0.3) {
-                        setActionState(3);
-                        break;
+                        setActionState(2);
+
                     }
-                }
+                }break;
+            case 2:
+                ClawOpen();
+                if (actionTimer.getElapsedTimeSeconds()>0.3){
+                    setActionState(3);
+                }break;
             case 3:
                 WristPar();
                 if (OuttakingToRest()){
