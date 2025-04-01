@@ -36,6 +36,7 @@ import pedroPathing.constants.LConstants;
 public class sampAuton extends OpMode {
     private DcMotorEx AMotor,S1Motor,S2Motor;
     private Servo wrist,claw,rotation;
+    private Limelight3A limelight;
     private Follower follower;
     private Timer pathTimer, actionTimer, opmodeTimer;
 
@@ -233,6 +234,11 @@ public class sampAuton extends OpMode {
         rotation.setPosition(rotationPos);
     }
 
+    public void LimelightOpen(){
+        limelight.start();
+    }
+    public void LimelightClose(){limelight.stop();}
+
 
 
 public void autonomousPathUpdate() {
@@ -241,8 +247,9 @@ public void autonomousPathUpdate() {
                 follower.followPath(scorePreload);
                 if (actionState == 4){
                     setPathState(1);
-                    break;
+
                 }
+                break;
 
             case 1:
                 /* You could check for
@@ -363,113 +370,113 @@ public void autonomousPathUpdate() {
                 WristPar();
                 if (OuttakingToRest()){
                     setActionState(4);
-                    break;
-                }
+
+                }break;
             case 4:
-                if (SlideOut()){
+                if (SlideOut()) {
                     setActionState(5);
-                    break;
-                }
+                }break;
+
             case 5:
                 if (!follower.isBusy()){
-                    if (ArmDown()){
+                    if (ArmDown()) {
                         setActionState(6);
-                        break;
-                    }
+                    }    break;
+
                 }
             case 6:
                 ClawClose();
-                if (actionTimer.getElapsedTimeSeconds()>.2){
+                if (actionTimer.getElapsedTimeSeconds()>.2) {
                     setActionState(7);
-                    break;
-                }
+                }    break;
+
             case 7:
-                if (ToRest()){
+                if (ToRest()) {
                     setActionState(8);
-                    break;
-                }
+                }    break;
+
             case 8:
-                if (RestToOuttaking()){
+                if (RestToOuttaking()) {
                     setActionState(9);
-                    break;
-                }
+                }    break;
+
             case 9:
                 if (!follower.isBusy()){
                     WristOuttaking();
                     ClawOpen();
                     if (actionTimer.getElapsedTimeSeconds()>.3){
                         setActionState(10);
-                        break;
+
                     }
-                }
+                }break;
             case 10:
                 WristPar();
                 if(OuttakingToRest()){
                     setActionState(11);
-                    break;
-                }
+
+                }break;
             case 11:
-                if (SlideOut()){
+                if (SlideOut()) {
                     setActionState(12);
-                    break;
-                }
+                }    break;
+
             case 12:
                 if(!follower.isBusy()) {
                     if (ArmDown()) {
                         setActionState(13);
-                        break;
+
                     }
-                }
+                }break;
             case 13:
                 ClawClose();
-                if (actionTimer.getElapsedTimeSeconds()>.2){
+                if (actionTimer.getElapsedTimeSeconds()>.2) {
                     setActionState(14);
-                    break;
-                }
+                }    break;
+
             case 14:
-                if (ToRest()){
+                if (ToRest()) {
                     setActionState(15);
-                    break;
-                }
+                }    break;
+
             case 15:
-                if (RestToOuttaking()){
+                if (RestToOuttaking()) {
                     setActionState(16);
-                    break;
-                }
+                }    break;
+
             case 16:
                 if (!follower.isBusy()){
                     WristOuttaking();
                     ClawOpen();
                     if (actionTimer.getElapsedTimeSeconds()>.3){
                         setActionState(17);
-                        break;
+
                     }
-                }
+                }break;
             case 17:
                 WristPar();
-                if(OuttakingToRest()){
+                if(OuttakingToRest()) {
                     setActionState(18);
-                    break;
-                }
+                }    break;
+
             case 18:
                 RotationSpecial();
-                if (SlideOut()){
+                if (SlideOut()) {
                     setActionState(19);
-                    break;
-                }
+                }    break;
+
             case 19:
                 if (!follower.isBusy()){
                     if (ArmDown()){
                         setActionState(20);
-                        break;
+
                     }
-                }
+                }break;
             case 20:
                 ClawClose();
                 if (actionTimer.getElapsedTimeSeconds()>.2){
                     setActionState(21);
-                    break;
-                }
+
+                }break;
             case 21:
                 RotationNormal();
                 if (ToRest()){
@@ -477,23 +484,28 @@ public void autonomousPathUpdate() {
                     break;
                 }
             case 22:
-                if(RestToOuttaking()){
+                if(RestToOuttaking()) {
                     setActionState(23);
-                    break;
-                }
+                }    break;
+
             case 23:
                 if(!follower.isBusy()){
                     WristOuttaking();
                     ClawOpen();
                     if (actionTimer.getElapsedTimeSeconds()>.3){
                         setActionState(24);
-                        break;
+
                     }
-                }
+                }break;
             case 24:
                 WristPar();
                 if(OuttakingToRest()){
-                    setActionState(25);
+                    setActionState(99);
+                }break;
+            case 25:
+                if (!follower.isBusy()){
+                    SlideOut();
+                    LimelightOpen();
                 }
 
 
@@ -544,7 +556,7 @@ public void autonomousPathUpdate() {
         rotation = hardwareMap.get(Servo.class,"rotation");
         claw = hardwareMap.get(Servo.class,"claw");
 
-        Limelight3A limelight = hardwareMap.get(Limelight3A.class,"limelight");
+        limelight = hardwareMap.get(Limelight3A.class,"limelight");
         pathTimer = new Timer();
         actionTimer = new Timer();
         opmodeTimer = new Timer();
@@ -570,11 +582,12 @@ public void autonomousPathUpdate() {
         S2Motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         S2Motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         S2Motor.setPower(0);
-        armTarget = armPar;
-        slideTarget = slidePar;
+
         wrist.setPosition(wristPerp);
         rotation.setPosition(rotationPos);
         claw.setPosition(clawClose);
+        limelight.pipelineSwitch(1);
+
 
 
     }

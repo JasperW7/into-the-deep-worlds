@@ -30,7 +30,7 @@ public class sample extends LinearOpMode{
     public double rotationPos = 0.46;
     public double pusherClose = 0.98, pusherOpen = 0;
     public double armDown = 25;
-    public double armPar = 150, armUp = 890;
+    public double armPar = 100, armUp = 890;
     public int slideInterval = 15;
     public double outToRestBuffer = 600, restToOuttake = 1000;
 
@@ -457,7 +457,7 @@ public class sample extends LinearOpMode{
                     if (init) {
                         wrist.setPosition(wristPar);
                         clawIsOpen = true;
-                        armTempTarget = 150;
+                        armTempTarget = 100;
                         slideTarget = 400;
                         micro = true;
                     }
