@@ -33,7 +33,7 @@ import pedroPathing.constants.LConstants;
  */
 
 @Autonomous(name = "Sample", group = "Autonomous")
-public class sampAuton extends OpMode {
+public class sampAuton2 extends OpMode {
     private DcMotorEx AMotor,S1Motor,S2Motor;
     private Servo wrist,claw,rotation;
     private Limelight3A limelight;
@@ -172,6 +172,7 @@ public class sampAuton extends OpMode {
     }
 
     public boolean OuttakingToRest(){
+        WristPar();
         slideTarget = slidePar;
         if (S1Motor.getCurrentPosition()<120){
             armTarget = armPar;
@@ -193,6 +194,7 @@ public class sampAuton extends OpMode {
         return false;
     }
     public boolean ArmDown(){
+        WristPar();
         armTarget = armDown;
         if (AMotor.getCurrentPosition()<armDown+5){
             return true;
@@ -245,7 +247,7 @@ public class sampAuton extends OpMode {
 
 
 
-public void autonomousPathUpdate() {
+    public void autonomousPathUpdate() {
         switch (pathState) {
             case 0:
                 if (!follower.isBusy()) {
@@ -279,9 +281,9 @@ public void autonomousPathUpdate() {
             case 2:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
 
-                    /* Grab Sample */
+                /* Grab Sample */
 
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
+                /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
                 if (!follower.isBusy()){
                     follower.followPath(scorePickup1,true);
                     if (actionState >= 11) {

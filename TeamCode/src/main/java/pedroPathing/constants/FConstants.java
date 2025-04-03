@@ -28,23 +28,23 @@ public class FConstants {
         FollowerConstants.forwardZeroPowerAcceleration = -49.3003;
         FollowerConstants.lateralZeroPowerAcceleration = -80.77;
 
-        FollowerConstants.translationalPIDFCoefficients.setCoefficients(0.4,0,0.03,0);
-        FollowerConstants.useSecondaryTranslationalPID = false;
-        FollowerConstants.secondaryTranslationalPIDFCoefficients.setCoefficients(0.1,0,0.01,0); // Not being used, @see useSecondaryTranslationalPID
+        FollowerConstants.translationalPIDFCoefficients.setCoefficients(0.4,0,0.04,0); //0.04
+        FollowerConstants.useSecondaryTranslationalPID = true;
+        FollowerConstants.secondaryTranslationalPIDFCoefficients.setCoefficients(0.1,0,0,0); // Not being used, @see useSecondaryTranslationalPID //0.01
 
-        FollowerConstants.headingPIDFCoefficients.setCoefficients(2.5,0,0.08,0);
+        FollowerConstants.headingPIDFCoefficients.setCoefficients(3,0,0,0); //0.1
         FollowerConstants.useSecondaryHeadingPID = true;
-        FollowerConstants.secondaryHeadingPIDFCoefficients.setCoefficients(2,0,0.1,0); // Not being used, @see useSecondaryHeadingPID
+        FollowerConstants.secondaryHeadingPIDFCoefficients.setCoefficients(2,0,0,0); // Not being used, @see useSecondaryHeadingPID //0.1
 
         FollowerConstants.drivePIDFCoefficients.setCoefficients(0.01,0,0,1,0);
         FollowerConstants.useSecondaryDrivePID = false;
-        FollowerConstants.secondaryDrivePIDFCoefficients.setCoefficients(0.1,0,0,0.6,0); // Not being used, @see useSecondaryDrivePID
+        FollowerConstants.secondaryDrivePIDFCoefficients.setCoefficients(0.1,0,0,0.6,0); // Not being used, @see useSecondaryDrivePID //0.6
 
-        FollowerConstants.zeroPowerAccelerationMultiplier = 4;
+        FollowerConstants.zeroPowerAccelerationMultiplier = 5;
         FollowerConstants.centripetalScaling = 0.0002;
 
-        FollowerConstants.pathEndTimeoutConstraint = 500;
-        FollowerConstants.pathEndTValueConstraint = 0.995;
+        FollowerConstants.pathEndTimeoutConstraint = 50;
+        FollowerConstants.pathEndTValueConstraint = 0.95;
         FollowerConstants.pathEndVelocityConstraint = 0.1;
         FollowerConstants.pathEndTranslationalConstraint = 0.1;
         FollowerConstants.pathEndHeadingConstraint = 0.007;

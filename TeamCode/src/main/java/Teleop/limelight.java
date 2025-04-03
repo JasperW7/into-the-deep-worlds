@@ -3,11 +3,13 @@ package Teleop;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.arcrobotics.ftclib.controller.PIDFController;
+import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 @Config
@@ -15,14 +17,15 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 public class limelight extends LinearOpMode { ;
 
     public DcMotorEx S1Motor, S2Motor, AMotor, FL, FR, BR, BL;
+    public Servo wrist,rotation;
     public Limelight3A limelight;
+    public LLResult result;
     public double clawROpen = 0.25, clawRClose = 0.75;
     PIDFController armPIDF = new PIDFController(0,0,0, 0);
     public static double armP = 0.02, armI = 0, armD = 0.001, armF = 0;
     //    extended PID
     public static double armTarget = 0.0;
     public double armPower = 0.0;
-
     //  SLIDES PID
     PIDFController slidePIDF = new PIDFController(0,0,0, 0);
     public static double slideP = 0.017, slideI = 0, slideD = 0.00018, slideF = 0;
@@ -49,11 +52,14 @@ public class limelight extends LinearOpMode { ;
         FR = hardwareMap.get(DcMotorEx.class, "FR");
         BL = hardwareMap.get(DcMotorEx.class, "BL");
         BR = hardwareMap.get(DcMotorEx.class, "BR");
+        wrist = hardwareMap.get(Servo.class,"wrist");
+        rotation = hardwareMap.get(Servo.class,"rotation");
 
         FL.setDirection(DcMotorEx.Direction.FORWARD);
         BL.setDirection(DcMotorEx.Direction.FORWARD);
         FR.setDirection(DcMotorEx.Direction.REVERSE);
         BR.setDirection(DcMotorEx.Direction.REVERSE);
+
 
         FL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         BL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
@@ -94,25 +100,29 @@ public class limelight extends LinearOpMode { ;
     }
 
     @Override
-    public void runOpMode(){
+    public void runOpMode() {
         initHardware();
 
         waitForStart();
-
-        while(opModeIsActive()){
-            if (gamepad1.x){
-                limelight.stop();
-            }else{
+        while (opModeIsActive()) {
+            wrist.setPosition(0.62);
+            if (gamepad1.x) {
                 limelight.start();
+                result = limelight.getLatestResult();
+                if (result != null) {
+                    double[] pythonOutputs = result.getPythonOutput();
+                    telemetry.addData("tx", result.getTx());
+                    telemetry.addData("ty", result.getTy());
+                    telemetry.addData("py angle", pythonOutputs[4]);
+                    double angle = pythonOutputs[4];
+                    if (angle<0) {angle=angle/180;} else {angle = (180+angle)/180;}
+                    telemetry.addData("angle",angle);
+                    rotation.setPosition(angle);
+                    limelight.pause();
+                }
+                telemetry.update();
             }
-            telemetry.addData("status","running");
-            telemetry.addData("active", limelight.getStatus());
-            telemetry.addData("connection",limelight.isConnected());
-            telemetry.addData("ll result", limelight.getLatestResult());
-            telemetry.addData("time",limelight.getTimeSinceLastUpdate());
-            telemetry.update();
         }
+
     }
-
-
-}
+    }

@@ -503,8 +503,8 @@ public class sample extends LinearOpMode{
                 case HANG:
                     if (init) {
                         clawIsOpen = false;
-                        armTarget = 900;
-                        slideTarget = 600;
+                        armTarget = armDown;
+                        slideTarget = 100;
                         wrist.setPosition(wristPar);
                         rotation.setPosition(0.5);
                     }
