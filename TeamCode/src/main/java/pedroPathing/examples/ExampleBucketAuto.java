@@ -29,7 +29,7 @@ import pedroPathing.constants.LConstants;
 public class ExampleBucketAuto extends OpMode {
 
     private Follower follower;
-    private Timer pathTimer, actionTimer, opmodeTimer;
+    private Timer pathTimer, actionTimer, opmodeTimer, loopTimer;
 
     /** This is the variable where we store the state of our auto.
      * It is used by the pathUpdate method. */
@@ -254,6 +254,8 @@ public class ExampleBucketAuto extends OpMode {
         telemetry.addData("x", follower.getPose().getX());
         telemetry.addData("y", follower.getPose().getY());
         telemetry.addData("heading", follower.getPose().getHeading());
+        telemetry.addData("loop ms",loopTimer.getElapsedTime());
+        loopTimer.resetTimer();
         telemetry.update();
     }
 

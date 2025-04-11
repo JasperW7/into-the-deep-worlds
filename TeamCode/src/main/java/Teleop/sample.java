@@ -36,15 +36,15 @@ public class sample extends LinearOpMode{
 
     //  ARM PID
     PIDFController armPIDF = new PIDFController(0,0,0, 0);
-    static double armP = 0.03, armI = 0, armD = 0, armF = 0;
-    static double armPE = 0.01, armIE = 0, armDE = 0, armFE = 0.005;
-    static double armTarget = 0.0;
+     double armP = 0.03, armI = 0, armD = 0, armF = 0;
+     double armPE = 0.01, armIE = 0, armDE = 0, armFE = 0.005;
+     double armTarget = 0.0;
 
     //  SLIDES PID
     PIDFController slidePIDF = new PIDFController(0,0,0, 0);
-    static double slideP = 0.017, slideI = 0, slideD = 0.00018, slideF = 0;
+     double slideP = 0.017, slideI = 0, slideD = 0.00018, slideF = 0;
     //    static double slidePE = 0.008, slideIE = 0, slideDE = 0.00018, slideFE = 0;
-    static double slideTarget = 0.0;
+     double slideTarget = 0.0;
     double slidePower = 0.0;
 
 
@@ -52,6 +52,9 @@ public class sample extends LinearOpMode{
     boolean switched = false;
     boolean switchPrev = false;
     boolean hangPrev = false;
+    int slow = 1;
+    boolean scoreRot = false;
+    boolean slowPrev = false;
     boolean hangYPrev = false;
     boolean hangXPrev = false;
     boolean toHang = false;
@@ -200,10 +203,10 @@ public class sample extends LinearOpMode{
 
             if (!micro) {
                 double denom = Math.max(Math.abs(x) + Math.abs(y) + Math.abs(rx), 1);
-                frontLeftPower = (y + x + rx) / denom;
-                backLeftPower = (y - x + rx) / denom;
-                frontRightPower = (y - x - rx) / denom;
-                backRightPower = (y + x - rx) / denom;
+                frontLeftPower = (y + x + rx) / (denom*slow);
+                backLeftPower = (y - x + rx) / (denom*slow);
+                frontRightPower = (y - x - rx) / (denom*slow);
+                backRightPower = (y + x - rx) / (denom*slow);
 
                 FL.setPower(frontLeftPower);
                 FR.setPower(frontRightPower);
@@ -281,6 +284,12 @@ public class sample extends LinearOpMode{
                 claw.setPosition(clawOpen);
             }
 
+            if (gamepad2.right_bumper){
+                pusher.setPosition(pusherOpen);
+            }else{
+                pusher.setPosition(pusherClose);
+            }
+
 //  SLIDES
             slideTarget += (gamepad1.dpad_up && slideTarget < slideMax) ? slideInterval : 0;
             slideTarget -= (gamepad1.dpad_down && slideTarget > 500) ? slideInterval : 0;
@@ -308,12 +317,12 @@ public class sample extends LinearOpMode{
                     slideInterval = 10;
                     init = true;
                 } else if (mode == Mode.OUTTAKING) {
+                    slow = 1;
                     wrist.setPosition(wristPar);
                     mode = Mode.REST;
                     init = true;
                 } else if (mode == Mode.INTAKING) {
                     wrist.setPosition(wristPerp);
-                    pusher.setPosition(pusherClose);
                     micro = false;
                     mode = Mode.REST;
                     init = true;
@@ -333,6 +342,13 @@ public class sample extends LinearOpMode{
                 }
             }
             switchPrev = switchCurr;
+
+            boolean scoreRotCurr = gamepad2.left_bumper;
+            if (scoreRotCurr && !scoreRot){
+                scoreRot = !scoreRot;
+            }
+            scoreRot = scoreRotCurr;
+
 //
 //            boolean hangYCurr = gamepad1.y;
 //            if (hangYCurr && !hangYPrev){
@@ -364,12 +380,12 @@ public class sample extends LinearOpMode{
 //
 //
 //            }
-            if (gamepad1.y){
+            if (gamepad2.dpad_down){
                 pwmEnable(hangL);
                 pwmEnable(hangR);
                 hangL.setPosition(1);
                 hangR.setPosition(0);
-            }else if (gamepad1.b){
+            }else if (gamepad2.dpad_up){
                 pwmEnable(hangL);
                 pwmEnable(hangR);
                 hangL.setPosition(0);
@@ -393,6 +409,12 @@ public class sample extends LinearOpMode{
                 init = true;
             }
             hangPrev = hangCurr;
+
+            boolean slowCurr = gamepad2.b;
+            if (slowCurr && !slowPrev){
+                slow = 2;
+            }
+            slowPrev = slowCurr;
 
 
 //            if (firstRun) {
@@ -441,7 +463,6 @@ public class sample extends LinearOpMode{
 
                     boolean intakeCurr = gamepad1.left_bumper;
                     if (intakeCurr && !intakePrev) {
-                        pusher.setPosition(pusherOpen);
                         micro = true;
                         rotationPos = 0.5;
                         slideTarget = 400;
@@ -485,10 +506,16 @@ public class sample extends LinearOpMode{
 
                     }
                     init = false;
+
+                    if (scoreRot){
+                        rotation.setPosition(1);
+                    }else{
+                        rotation.setPosition(rotationPos);
+                    }
                     if (S1Motor.getCurrentPosition() > 400) {
                         wrist.setPosition(wristOuttake);
                     }
-                    if (slideOuttake && AMotor.getCurrentPosition()>700) {
+                    if (slideOuttake && AMotor.getCurrentPosition()>600) {
                         slideTarget = slideMax;
                         slideOuttake = false;
                     }

@@ -35,8 +35,8 @@ import pedroPathing.constants.LConstants;
  * @version 2.0, 11/28/2024
  */
 
-@Autonomous(name = "Sample 2", group = "Auto")
-public class sampAuton2 extends OpMode {
+@Autonomous(name = "Limelight", group = "Auto")
+public class limelightTuning extends OpMode {
     private DcMotorEx AMotor,S1Motor,S2Motor;
     private Servo wrist,claw,rotation;
     private Limelight3A limelight;
@@ -44,7 +44,7 @@ public class sampAuton2 extends OpMode {
     private Timer opmodeTimer,loopTimer,stateTimer;
 
     public double wristPar = 0.1, wristPerp = 0.62, wristOuttake = 0.82;
-    public double clawOpen =  0.43, clawClose = 0.74;
+    public double clawOpen =  0.3, clawClose = 0.74;
     public double rotationPos = 0.46;
     public double armDown = 25;
     public double armPar = 100, armUp = 890, slidePar = 100,slideUp = 1400;
@@ -66,11 +66,10 @@ public class sampAuton2 extends OpMode {
 
     LLResult result;
     double angle = 0.46;
-    double tx,ty;
+    double tx = 0,ty = 0;
 
     boolean slow;
     boolean followerDone= false;
-    boolean followerDoneDelay = false;
 
     /** This is the variable where we store the state of our auto.
      * It is used by the pathUpdate method. */
@@ -89,21 +88,21 @@ public class sampAuton2 extends OpMode {
     private final Pose startPose = new Pose(9, 111, Math.toRadians(270));
 
     /** Scoring Pose of our robot. It is facing the submersible at a -45 degree (315 degree) angle. */
-    private final Pose scorePose = new Pose(18, 126, Math.toRadians(315));
+    private final Pose scorePose = new Pose(19, 124, Math.toRadians(315));
 
     /** Lowest (First) Sample from the Spike Mark */
-    private final Pose pickup1Pose = new Pose(26, 119, Math.toRadians(0));
+    private final Pose pickup1Pose = new Pose(26, 121, Math.toRadians(0));
 
     /** Middle (Second) Sample from the Spike Mark */
-    private final Pose pickup2Pose = new Pose(28, 130, Math.toRadians(0));
+    private final Pose pickup2Pose = new Pose(26, 131, Math.toRadians(0));
 
     /** Highest (Third) Sample from the Spike Mark */
-    private final Pose pickup3Pose = new Pose(28, 130, Math.toRadians(40));
+    private final Pose pickup3Pose = new Pose(28, 133, Math.toRadians(30));
 
     /** Park Pose for our robot, after we do all of the scoring. */
     private final Pose parkPose = new Pose(60, 98, Math.toRadians(270));
 
-    private final Pose subPose = new Pose(60,98,Math.toRadians(270));
+    private Pose subPose = new Pose(60+tx,98+ty,Math.toRadians(270));
 
     /** Park Control Pose for our robot, this is used to manipulate the bezier curve that we will create for the parking.
      * The Robot will not go to this pose, it is used a control point for our bezier curve. */
@@ -191,10 +190,7 @@ public class sampAuton2 extends OpMode {
         park = new Path(new BezierCurve(new Point(scorePose), new Point(parkControlPose), new Point(parkPose)));
         park.setLinearHeadingInterpolation(scorePose.getHeading(), parkPose.getHeading());
 
-        sub1 = follower.pathBuilder()
-                .addPath(new BezierLine(new Point(parkPose),new Point(subPose)))
-                .setLinearHeadingInterpolation(parkPose.getHeading(),parkPose.getHeading())
-                .build();
+
     }
 
     public void next(){
@@ -207,7 +203,6 @@ public class sampAuton2 extends OpMode {
         slow = false;
         armTarget = 890;
         if (AMotor.getCurrentPosition()>700){
-            RotationScore();
             slideTarget = 1400;
         }
         if (S1Motor.getCurrentPosition()>1300){
@@ -220,14 +215,13 @@ public class sampAuton2 extends OpMode {
     }
 
     public boolean ArmScoreToRest(){
-        RotationNormal();
         WristPar();
         slideTarget = 300;
-        if (S1Motor.getCurrentPosition()<400){
+        if (S1Motor.getCurrentPosition()<500){
             slow = true;
             armTarget = 250;
         }
-        return AMotor.getCurrentPosition() < 270;
+        return AMotor.getCurrentPosition() < 300;
     }
 
     public boolean ArmDownToGrab(){
@@ -261,7 +255,6 @@ public class sampAuton2 extends OpMode {
     public void RotationNormal(){
         rotation.setPosition(rotationPos);
     }
-    public void RotationScore() {rotation.setPosition(1);}
     public void RotationSub(){
         rotation.setPosition(angle);
     }
@@ -272,10 +265,15 @@ public class sampAuton2 extends OpMode {
         if (result!= null){
             double[] python = result.getPythonOutput();
             double tx = result.getTx();
-            double ty = result.getTy();
+            double ty = 2*result.getTy();
             double rawAngle = python[4];
             angle = (rawAngle >= 0) ? (1 - rawAngle / 180) : (-rawAngle / 180);
-
+            slideTarget = 25*ty;
+            subPose = new Pose(follower.getPose().getX()-2*tx,follower.getPose().getY(),follower.getPose().getHeading());
+            sub1 = follower.pathBuilder()
+                    .addPath(new BezierLine(new Point(parkPose),new Point(subPose)))
+                    .setLinearHeadingInterpolation(parkPose.getHeading(),parkPose.getHeading())
+                    .build();
             return true;
         }else{
             return false;
@@ -288,299 +286,36 @@ public class sampAuton2 extends OpMode {
 
     public void autonomousPathUpdate() {
         switch (state) {
-//            case 0:
-//                if (!followerDone){
-//                    follower.followPath(scorePreload,true);
-//                    followerDone = true;
-//                }
-//                if (ArmRestToScore() && follower.getPose().getY()>123){
-//                    followerDone = false;
-//                    next();
-//                }
-//                break;
-//            case 1:
-//            case 5:
-//            case 9:
-//                if (stateTimer.getElapsedTimeSeconds()>.2){
-//                    ClawOpen();
-//                    if (stateTimer.getElapsedTimeSeconds()>.5){
-//                        next();
-//                    }
-//                }break;
-//            case 2:
-//                if (!followerDone){
-//                    follower.followPath(grabPickup1,true);
-//                    followerDone = true;
-//                }
-//                if (ArmScoreToRest() && follower.getPose().getX()>25){
-//                    followerDone = false;
-//                    next();
-//
-//                }break;
-//            case 3:
-//            case 7:
-//            case 11:
-//                if (stateTimer.getElapsedTimeSeconds()>.5){
-//                    if (ArmDownToGrab()){
-//                        next();
-//                    }
-//                }break;
-//            case 4:
-//                if (stateTimer.getElapsedTimeSeconds()>.4){
-//                    ClawClose();
-//                    if (stateTimer.getElapsedTime()>.7){
-//                        if (!followerDone){
-//                            follower.followPath(scorePickup1);
-//                            followerDone = true;
-//                        }
-//                        if (ArmRestToScore() && follower.getPose().getX()<20){
-//                            followerDone = false;
-//                            next();
-//                        }
-//                    }
-//                }break;
-//            case 6:
-//                if (!followerDone){
-//                    follower.followPath(grabPickup2);
-//                    followerDone = true;
-//                }
-//                if (ArmScoreToRest() && follower.getPose().getX()>25){
-//                    followerDone = false;
-//                    next();
-//                }
-//                break;
-//            case 8:
-//                if (stateTimer.getElapsedTimeSeconds()>.2){
-//                    ClawClose();
-//                    if (stateTimer.getElapsedTime()>.7){
-//                        if (!followerDone){
-//                            follower.followPath(scorePickup2);
-//                            followerDone = true;
-//                        }
-//                        if (ArmRestToScore() && follower.getPose().getX()<20){
-//                            followerDone = false;
-//                            next();
-//                        }
-//                    }
-//                }break;
-//            case 10:
-//                if (!followerDone){
-//                    follower.followPath(grabPickup3);
-//                    followerDone = true;
-//                }
-//                if (ArmScoreToRest() && follower.getPose().getX()>27){
-//                    RotationSpecial();
-//                    followerDone = false;
-//                    next();
-//                }
-//                break;
-//            case 12:
-//                if (stateTimer.getElapsedTimeSeconds()>.2){
-//                    ClawClose();
-//                    if (stateTimer.getElapsedTime()>.7){
-//                        if (!followerDone){
-//                            follower.followPath(scorePickup3);
-//                            followerDone = true;
-//                        }
-//                        if (ArmRestToScore() && follower.getPose().getX()<20){
-//                            followerDone = false;
-//                            next();
-//                        }
-//                    }
-//                }break;
-//
             case 0:
-                if (!followerDone) {
-                    follower.followPath(scorePreload, true);
-                    followerDone = true;
-                }
-                if (ArmRestToScore() && follower.getPose().getY() > 123) {
-                    if (!followerDoneDelay) {
-                        followerDoneDelay = true;
-                        stateTimer.resetTimer();
-                    } else if (stateTimer.getElapsedTimeSeconds() > 0.5) {
-                        followerDone = false;
-                        followerDoneDelay = false;
-                        next();
-                    }
-                } else {
-                    followerDoneDelay = false;
-                }
-                break;
-
+                ClawOpen();
+                ArmScoreToRest();
+                if (LimelightOpen()){
+                    next();
+                }break;
             case 1:
-            case 6:
-            case 11:
-            case 16:
-                if (stateTimer.getElapsedTimeSeconds() > 0.4) {
-                    ClawOpen();
-                    if (stateTimer.getElapsedTimeSeconds() > 0.7) {
-                        next();
-                    }
+                if (!followerDone){
+                    follower.followPath(sub1);
                 }
-                break;
-
-            case 2:
-                if (!followerDone) {
-                    follower.followPath(grabPickup1, true);
-                    followerDone = true;
-                }
-                if (ArmScoreToRest() && follower.headingError < 0.02) {
-                    if (!followerDoneDelay) {
-                        followerDoneDelay = true;
-                        stateTimer.resetTimer();
-                    } else if (stateTimer.getElapsedTimeSeconds() > 0.5) {
-                        followerDone = false;
-                        followerDoneDelay = false;
-                        next();
-                    }
-                } else {
-                    followerDoneDelay = false;
-                }
-                break;
-
-            case 3:
-            case 8:
-            case 13:
-                if (stateTimer.getElapsedTime() > .5) {
-                    if (ArmDownToGrab()) {
-                        next();
-                    }
-                }
-                break;
-
-            case 4:
-            case 9:
-            case 14:
-                if (stateTimer.getElapsedTimeSeconds() > 0.3) {
-                    ClawClose();
+                if (follower.driveError<.5){
+                    followerDone = false;
                     next();
                 }
-                break;
-
-            case 5:
-                if (stateTimer.getElapsedTimeSeconds() > 0.3) {
-                    if (!followerDone) {
-                        follower.followPath(scorePickup1, true);
-                        followerDone = true;
-                    }
-                    if (ArmRestToScore() && follower.getPose().getX() < 20) {
-                        if (!followerDoneDelay) {
-                            followerDoneDelay = true;
-                            stateTimer.resetTimer();
-                        } else if (stateTimer.getElapsedTimeSeconds() > 0.5) {
-                            followerDone = false;
-                            followerDoneDelay = false;
-                            next();
-                        }
-                    } else {
-                        followerDoneDelay = false;
-                    }
-                }
-                break;
-
-            case 7:
-                if (!followerDone) {
-                    follower.followPath(grabPickup2, true);
-                    followerDone = true;
-                }
-                if (ArmScoreToRest() && follower.headingError < 0.02) {
-                    if (!followerDoneDelay) {
-                        followerDoneDelay = true;
-                        stateTimer.resetTimer();
-                    } else if (stateTimer.getElapsedTimeSeconds() > 0.5) {
-                        followerDone = false;
-                        followerDoneDelay = false;
+            case 2:
+                if (stateTimer.getElapsedTimeSeconds()>.5){
+                    RotationSub();
+                    if (ArmDownToGrab()){
                         next();
                     }
-                } else {
-                    followerDoneDelay = false;
+                }break;
+            case 3:
+                if (stateTimer.getElapsedTimeSeconds()>.5){
+                    ClawClose();
+                    next();
+                }break;
+            case 4:
+                if (stateTimer.getElapsedTimeSeconds()>.5){
+                    ArmScoreToRest();
                 }
-                break;
-
-            case 10:
-                if (stateTimer.getElapsedTimeSeconds() > 0.3) {
-                    if (!followerDone) {
-                        follower.followPath(scorePickup2, true);
-                        followerDone = true;
-                    }
-                    if (ArmRestToScore() && follower.getPose().getX() < 20) {
-                        if (!followerDoneDelay) {
-                            followerDoneDelay = true;
-                            stateTimer.resetTimer();
-                        } else if (stateTimer.getElapsedTimeSeconds() > 0.5) {
-                            followerDone = false;
-                            followerDoneDelay = false;
-                            next();
-                        }
-                    } else {
-                        followerDoneDelay = false;
-                    }
-                }
-                break;
-
-            case 12:
-                if (!followerDone) {
-                    follower.followPath(grabPickup3, true);
-                    followerDone = true;
-                }
-                if (ArmScoreToRest() && follower.headingError < 0.02) {
-                    if (!followerDoneDelay) {
-                        followerDoneDelay = true;
-                        stateTimer.resetTimer();
-                    } else if (stateTimer.getElapsedTimeSeconds() > 0.5) {
-                        followerDone = false;
-                        followerDoneDelay = false;
-                        next();
-                    }
-                } else {
-                    followerDoneDelay = false;
-                }
-                break;
-
-            case 15:
-                if (stateTimer.getElapsedTimeSeconds() > 0.3) {
-                    if (!followerDone) {
-                        follower.followPath(scorePickup3, true);
-                        followerDone = true;
-                    }
-                    if (ArmRestToScore() && follower.getPose().getX() < 20) {
-                        if (!followerDoneDelay) {
-                            followerDoneDelay = true;
-                            stateTimer.resetTimer();
-                        } else if (stateTimer.getElapsedTimeSeconds() > 0.5) {
-                            followerDone = false;
-                            followerDoneDelay = false;
-                            next();
-                        }
-                    } else {
-                        followerDoneDelay = false;
-                    }
-                }
-                break;
-
-            case 17:
-                if (!followerDone) {
-                    follower.followPath(park, true);
-                    followerDone = true;
-                }
-                if (ArmScoreToRest() && follower.getPose().getY() < 99) {
-                    if (!followerDoneDelay) {
-                        followerDoneDelay = true;
-                        stateTimer.resetTimer();
-                    } else if (stateTimer.getElapsedTimeSeconds() > 0.5) {
-                        followerDone = false;
-                        followerDoneDelay = false;
-                        next();
-                    }
-                } else {
-                    followerDoneDelay = false;
-                }
-                break;
-
-
-
-
 
         }
     }
@@ -588,7 +323,11 @@ public class sampAuton2 extends OpMode {
     /** This is the main loop of the OpMode, it will run repeatedly after clicking "Play". **/
     @Override
     public void loop() {
-
+        if (gamepad1.dpad_down){
+            slideTarget -= 5;
+        }else if (gamepad1.dpad_up){
+            slideTarget += 5;
+        }
         // These loop the movements of the robot
         follower.drawOnDashBoard();
         follower.update();
@@ -601,10 +340,11 @@ public class sampAuton2 extends OpMode {
         telemetry.addData("busy",follower.isBusy());
         telemetry.addData("arm",AMotor.getCurrentPosition());
         telemetry.addData("slide",S1Motor.getCurrentPosition());
+        telemetry.addData("tx",tx);
+        telemetry.addData("ty",ty);
         telemetry.addData("x", follower.getPose().getX());
         telemetry.addData("y", follower.getPose().getY());
         telemetry.addData("heading", follower.getPose().getHeading());
-        telemetry.addData("hError",follower.headingError);
         telemetry.update();
     }
 

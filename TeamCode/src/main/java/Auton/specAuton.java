@@ -13,7 +13,7 @@ import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import pedroPathing.constants.FConstants;
 import pedroPathing.constants.LConstants;
-@Autonomous(name = "Specimen", group = "Autonomous")
+@Autonomous(name = "Specimen", group = "Auto")
 public class specAuton extends OpMode{
     private Follower follower;
     private Timer pathTimer, actionTimer, opmodeTimer;

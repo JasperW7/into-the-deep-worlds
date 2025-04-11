@@ -2,6 +2,7 @@ repositories {
     mavenCentral()
     google()
 
+    maven { url = "https://maven.rowanmcalpin.com/" }
     maven { url = 'https://maven.brott.dev/' }
     maven { url= "https://maven.pedropathing.com/" }
 
@@ -17,9 +18,12 @@ dependencies {
     implementation 'org.firstinspires.ftc:FtcCommon:10.2.0'
     implementation 'org.firstinspires.ftc:Vision:10.2.0'
     implementation 'com.pedropathing:pedro:1.0.8'
+    implementation 'org.ftclib.ftclib:core:2.1.1' // core
 
     //noinspection GradleDependency
-
+    implementation 'com.rowanmcalpin.nextftc:core:0.6.1'
+    implementation 'com.rowanmcalpin.nextftc:ftc:0.6.1'
+    implementation 'com.rowanmcalpin.nextftc:pedro:0.6.1'
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'com.acmerobotics.dashboard:dashboard:0.4.16'
 }

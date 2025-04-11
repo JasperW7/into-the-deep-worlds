@@ -1,5 +1,6 @@
 package Auton;
 
+import com.arcrobotics.ftclib.command.Command;
 import com.arcrobotics.ftclib.controller.PIDFController;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.localization.Pose;
@@ -32,13 +33,13 @@ import pedroPathing.constants.LConstants;
  * @version 2.0, 11/28/2024
  */
 
-@Autonomous(name = "Sample", group = "Autonomous")
+@Autonomous(name = "Sample", group = "Auto")
 public class sampAuton extends OpMode {
     private DcMotorEx AMotor,S1Motor,S2Motor;
     private Servo wrist,claw,rotation;
     private Limelight3A limelight;
     private Follower follower;
-    private Timer pathTimer, actionTimer, opmodeTimer;
+    private Timer pathTimer, actionTimer, opmodeTimer,loopTimer;
 
     public double wristPar = 0.1, wristPerp = 0.62, wristOuttake = 0.82;
     public double clawOpen =  0.3, clawClose = 0.74;
@@ -50,15 +51,15 @@ public class sampAuton extends OpMode {
     public boolean intaking = false;
     //  ARM PID
     PIDFController armPIDF = new PIDFController(0,0,0, 0);
-    static double armP = 0.03, armI = 0, armD = 0, armF = 0;
-    static double armPE = 0.01, armIE = 0, armDE = 0, armFE = 0.005;
-    static double armTarget = 0.0;
+     double armP = 0.03, armI = 0, armD = 0, armF = 0;
+     double armPE = 0.01, armIE = 0, armDE = 0, armFE = 0.005;
+     double armTarget = 0.0;
 
     //  SLIDES PID
     PIDFController slidePIDF = new PIDFController(0,0,0, 0);
-    static double slideP = 0.017, slideI = 0, slideD = 0.00018, slideF = 0;
+     double slideP = 0.017, slideI = 0, slideD = 0.00018, slideF = 0;
     //    static double slidePE = 0.008, slideIE = 0, slideDE = 0.00018, slideFE = 0;
-    static double slideTarget = 0.0;
+     double slideTarget = 0.0;
     double slidePower = 0.0;
 
     /** This is the variable where we store the state of our auto.
@@ -555,6 +556,8 @@ public void autonomousPathUpdate() {
         telemetry.addData("x", follower.getPose().getX());
         telemetry.addData("y", follower.getPose().getY());
         telemetry.addData("heading", follower.getPose().getHeading());
+        telemetry.addData("loop time",loopTimer.getElapsedTime());
+        loopTimer.resetTimer();
         telemetry.update();
     }
 
@@ -574,6 +577,8 @@ public void autonomousPathUpdate() {
         actionTimer = new Timer();
         opmodeTimer = new Timer();
         opmodeTimer.resetTimer();
+        loopTimer = new Timer();
+        loopTimer.resetTimer();
 
         Constants.setConstants(FConstants.class, LConstants.class);
         follower = new Follower(hardwareMap);
