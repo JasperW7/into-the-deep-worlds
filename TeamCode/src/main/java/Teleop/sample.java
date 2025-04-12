@@ -29,7 +29,7 @@ public class sample extends LinearOpMode{
     public double clawOpen =  0.3, clawClose = 0.74;
     public double rotationPos = 0.46;
     public double pusherClose = 0.98, pusherOpen = 0;
-    public double armDown = 25;
+    public double armDown = 10;
     public double armPar = 100, armUp = 890;
     public int slideInterval = 15;
     public double outToRestBuffer = 600, restToOuttake = 1000;
@@ -53,7 +53,8 @@ public class sample extends LinearOpMode{
     boolean switchPrev = false;
     boolean hangPrev = false;
     int slow = 1;
-    boolean scoreRot = false;
+    boolean scoreRotPrev = false;
+    boolean scoreRot = true;
     boolean slowPrev = false;
     boolean hangYPrev = false;
     boolean hangXPrev = false;
@@ -317,6 +318,9 @@ public class sample extends LinearOpMode{
                     slideInterval = 10;
                     init = true;
                 } else if (mode == Mode.OUTTAKING) {
+                    rotationPos = 0.46;
+                    armDown = 15;
+                    scoreRot = true;
                     slow = 1;
                     wrist.setPosition(wristPar);
                     mode = Mode.REST;
@@ -343,11 +347,11 @@ public class sample extends LinearOpMode{
             }
             switchPrev = switchCurr;
 
-            boolean scoreRotCurr = gamepad2.left_bumper;
-            if (scoreRotCurr && !scoreRot){
+            boolean scoreRotCurr = gamepad2.x;
+            if (scoreRotCurr && !scoreRotPrev){
                 scoreRot = !scoreRot;
             }
-            scoreRot = scoreRotCurr;
+            scoreRotPrev = scoreRotCurr;
 
 //
 //            boolean hangYCurr = gamepad1.y;
@@ -484,12 +488,20 @@ public class sample extends LinearOpMode{
                     }
                     init = false;
 
+                    if (gamepad2.right_trigger>0){
+                        armTarget = armDown-10;
+                    }
+
 
                     //  LOWER ARM
                     if (gamepad1.left_bumper){
                         armTarget = armDown;
                     }else{
-                        armTarget = armTempTarget;
+                        if (gamepad2.right_trigger>0){
+                            armDown -= gamepad2.right_trigger*2;
+                        }else {
+                            armTarget = armTempTarget;
+                        }
                     }
 
 
@@ -508,9 +520,9 @@ public class sample extends LinearOpMode{
                     init = false;
 
                     if (scoreRot){
-                        rotation.setPosition(1);
+                        rotation.setPosition(0);
                     }else{
-                        rotation.setPosition(rotationPos);
+                        rotation.setPosition(0.46);
                     }
                     if (S1Motor.getCurrentPosition() > 400) {
                         wrist.setPosition(wristOuttake);
@@ -549,6 +561,7 @@ public class sample extends LinearOpMode{
             telemetry.addData("slide target", slideTarget);
 
             telemetry.addData("rotation", rotationPos);
+            telemetry.addData("score rotation",scoreRot);
             telemetry.addData("init", init);
             telemetry.addData("firstRun ", firstRun);
             telemetry.addData("firstRun1", firstRun1);

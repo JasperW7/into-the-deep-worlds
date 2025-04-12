@@ -21,6 +21,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import java.util.Arrays;
+
 import Teleop.sample;
 import pedroPathing.constants.FConstants;
 import pedroPathing.constants.LConstants;
@@ -70,10 +72,12 @@ public class limelightTuning extends OpMode {
 
     boolean slow;
     boolean followerDone= false;
+    boolean followerDoneDelay = false;
 
     /** This is the variable where we store the state of our auto.
      * It is used by the pathUpdate method. */
     private int state;
+    double [] python = null;
 
     /* Create and Define Poses + Paths
      * Poses are built with three constructors: x, y, and heading (in Radians).
@@ -216,12 +220,16 @@ public class limelightTuning extends OpMode {
 
     public boolean ArmScoreToRest(){
         WristPar();
-        slideTarget = 300;
-        if (S1Motor.getCurrentPosition()<500){
-            slow = true;
-            armTarget = 250;
+        armTarget =250;
+        return AMotor.getCurrentPosition() > 200;
+    }
+
+    public boolean ArmLimelight(){
+        slideTarget = 25*ty;
+        if (S1Motor.getCurrentPosition()>slideTarget-20){
+            return true;
         }
-        return AMotor.getCurrentPosition() < 300;
+        return false;
     }
 
     public boolean ArmDownToGrab(){
@@ -261,23 +269,27 @@ public class limelightTuning extends OpMode {
 
     public boolean LimelightOpen(){
         limelight.start();
+        WristPar();
         result = limelight.getLatestResult();
         if (result!= null){
-            double[] python = result.getPythonOutput();
-            double tx = result.getTx();
-            double ty = 2*result.getTy();
+            python = result.getPythonOutput();
+            telemetry.addData("result", Arrays.toString(python));
+            double tx = python[6];
+            double ty = python[5]-8;
             double rawAngle = python[4];
             angle = (rawAngle >= 0) ? (1 - rawAngle / 180) : (-rawAngle / 180);
-            slideTarget = 25*ty;
-            subPose = new Pose(follower.getPose().getX()-2*tx,follower.getPose().getY(),follower.getPose().getHeading());
+            slideTarget = 230 + ty*2.2;
+            subPose = new Pose(follower.getPose().getX() + 6.7 - tx/4.2,follower.getPose().getY(),follower.getPose().getHeading()); // 6.7 - tx/4.5
             sub1 = follower.pathBuilder()
                     .addPath(new BezierLine(new Point(parkPose),new Point(subPose)))
                     .setLinearHeadingInterpolation(parkPose.getHeading(),parkPose.getHeading())
                     .build();
-            return true;
-        }else{
-            return false;
-        }
+            if (S1Motor.getCurrentPosition()>slideTarget-20) {
+                limelight.pause();
+                return true;
+            }
+
+        }return false;
 
     }
     public void LimelightClose(){limelight.stop();}
@@ -288,34 +300,43 @@ public class limelightTuning extends OpMode {
         switch (state) {
             case 0:
                 ClawOpen();
-                ArmScoreToRest();
-                if (LimelightOpen()){
+                if (ArmScoreToRest()) {
                     next();
                 }break;
             case 1:
+                if (LimelightOpen()){
+                    next();
+                }break;
+            case 2:
                 if (!followerDone){
+                    RotationSub();
                     follower.followPath(sub1);
                 }
-                if (follower.driveError<.5){
-                    followerDone = false;
-                    next();
+                if (follower.driveError < 0.05) {
+                    if (!followerDoneDelay) {
+                        followerDoneDelay = true;
+                        stateTimer.resetTimer();
+                    } else if (stateTimer.getElapsedTimeSeconds() > 0.5) {
+                        followerDone = false;
+                        followerDoneDelay = false;
+                        next();
+                    }
+                } else {
+                    followerDoneDelay = false;
                 }
-            case 2:
+            case 3:
                 if (stateTimer.getElapsedTimeSeconds()>.5){
-                    RotationSub();
                     if (ArmDownToGrab()){
                         next();
                     }
                 }break;
-            case 3:
+            case 4:
                 if (stateTimer.getElapsedTimeSeconds()>.5){
                     ClawClose();
                     next();
                 }break;
-            case 4:
-                if (stateTimer.getElapsedTimeSeconds()>.5){
-                    ArmScoreToRest();
-                }
+
+
 
         }
     }
@@ -340,6 +361,7 @@ public class limelightTuning extends OpMode {
         telemetry.addData("busy",follower.isBusy());
         telemetry.addData("arm",AMotor.getCurrentPosition());
         telemetry.addData("slide",S1Motor.getCurrentPosition());
+        telemetry.addData("result",Arrays.toString(python));
         telemetry.addData("tx",tx);
         telemetry.addData("ty",ty);
         telemetry.addData("x", follower.getPose().getX());

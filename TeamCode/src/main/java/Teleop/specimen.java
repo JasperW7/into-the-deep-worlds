@@ -30,7 +30,7 @@ public class specimen extends LinearOpMode{
     public double rotationPos = 0.46;
     public double pusherClose = 0.98, pusherOpen = 0;
     public double armDown = 25;
-    public double armPar = 100, armUp = 890;
+    public double armPar = 50, armUp = 750;
     public int slideInterval = 15;
     public double outToRestBuffer = 600, restToOuttake = 1000;
 
@@ -75,8 +75,8 @@ public class specimen extends LinearOpMode{
 
     double frontLeftPower, frontRightPower, backLeftPower, backRightPower;
     double armTempTarget = armPar;
-    double armMax = 820;
-    double slideMax = 550;
+    double armMax = 890;
+    double slideMax = 570;
 
     public enum Mode {
         REST,
@@ -137,7 +137,7 @@ public class specimen extends LinearOpMode{
         S2Motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         S2Motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         S2Motor.setPower(0);
-        armTarget = 100;
+        armTarget = 50;
         slideTarget = 70;
         limelight.stop();
         pwmDisable(hangL);
@@ -259,7 +259,7 @@ public class specimen extends LinearOpMode{
             if (mode == Mode.INTAKING || micro) {
                 slideMax = 800;
             } else {
-                slideMax = 550;
+                slideMax = 570;
             }
 
 
@@ -463,7 +463,7 @@ public class specimen extends LinearOpMode{
                     if (init) {
                         wrist.setPosition(wristPar);
                         clawIsOpen = true;
-                        armTempTarget = 100;
+                        armTempTarget = 50;
                         slideTarget = 400;
                         micro = true;
                     }
@@ -492,14 +492,18 @@ public class specimen extends LinearOpMode{
                     }
                     init = false;
                     if (gamepad1.left_bumper){
-                        slideTarget = 550;
+                        slideTarget = slideMax;
                     }
                     if (S1Motor.getCurrentPosition() > 250) {
                         wrist.setPosition(wristOuttake);
                     }
                     if (slideOuttake && AMotor.getCurrentPosition()>600) {
-                        slideTarget = 400;
+                        slideTarget = 300;
                         slideOuttake = false;
+                    }
+
+                    if (S1Motor.getCurrentPosition()>540){
+                        clawIsOpen = true;
                     }
 
 

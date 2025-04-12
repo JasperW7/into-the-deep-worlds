@@ -21,6 +21,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import java.util.Arrays;
+
 import Teleop.sample;
 import pedroPathing.constants.FConstants;
 import pedroPathing.constants.LConstants;
@@ -43,7 +45,7 @@ public class sampAuton2 extends OpMode {
     private Follower follower;
     private Timer opmodeTimer,loopTimer,stateTimer;
 
-    public double wristPar = 0.1, wristPerp = 0.62, wristOuttake = 0.82;
+    public double wristPar = 0.1, wristPerp = 0.62, wristOuttake = 0.85;
     public double clawOpen =  0.43, clawClose = 0.74;
     public double rotationPos = 0.46;
     public double armDown = 25;
@@ -65,6 +67,7 @@ public class sampAuton2 extends OpMode {
     double slidePower = 0.0;
 
     LLResult result;
+    double [] python;
     double angle = 0.46;
     double tx,ty;
 
@@ -89,21 +92,21 @@ public class sampAuton2 extends OpMode {
     private final Pose startPose = new Pose(9, 111, Math.toRadians(270));
 
     /** Scoring Pose of our robot. It is facing the submersible at a -45 degree (315 degree) angle. */
-    private final Pose scorePose = new Pose(18, 126, Math.toRadians(315));
+    private final Pose scorePose = new Pose(17, 126, Math.toRadians(315));
 
     /** Lowest (First) Sample from the Spike Mark */
-    private final Pose pickup1Pose = new Pose(26, 119, Math.toRadians(0));
+    private final Pose pickup1Pose = new Pose(28.5, 120, Math.toRadians(0));
 
     /** Middle (Second) Sample from the Spike Mark */
-    private final Pose pickup2Pose = new Pose(28, 130, Math.toRadians(0));
+    private final Pose pickup2Pose = new Pose(28.5, 130, Math.toRadians(0));
 
     /** Highest (Third) Sample from the Spike Mark */
-    private final Pose pickup3Pose = new Pose(28, 130, Math.toRadians(40));
+    private final Pose pickup3Pose = new Pose(28.5, 130, Math.toRadians(26));
 
     /** Park Pose for our robot, after we do all of the scoring. */
     private final Pose parkPose = new Pose(60, 98, Math.toRadians(270));
 
-    private final Pose subPose = new Pose(60,98,Math.toRadians(270));
+    private Pose subPose;
 
     /** Park Control Pose for our robot, this is used to manipulate the bezier curve that we will create for the parking.
      * The Robot will not go to this pose, it is used a control point for our bezier curve. */
@@ -111,7 +114,7 @@ public class sampAuton2 extends OpMode {
 
     /* These are our Paths and PathChains that we will define in buildPaths() */
     private Path park;
-    private PathChain scorePreload,grabPickup1, grabPickup2, grabPickup3, scorePickup1, scorePickup2, scorePickup3,sub1;
+    private PathChain scorePreload,grabPickup1, grabPickup2, grabPickup3, scorePickup1, scorePickup2, scorePickup3,sub1,scoreSub1;
 
     /** Build the paths for the auto (adds, for example, constant/linear headings while doing paths)
      * It is necessary to do this so that all the paths are built before the auto starts. **/
@@ -191,10 +194,6 @@ public class sampAuton2 extends OpMode {
         park = new Path(new BezierCurve(new Point(scorePose), new Point(parkControlPose), new Point(parkPose)));
         park.setLinearHeadingInterpolation(scorePose.getHeading(), parkPose.getHeading());
 
-        sub1 = follower.pathBuilder()
-                .addPath(new BezierLine(new Point(parkPose),new Point(subPose)))
-                .setLinearHeadingInterpolation(parkPose.getHeading(),parkPose.getHeading())
-                .build();
     }
 
     public void next(){
@@ -208,9 +207,9 @@ public class sampAuton2 extends OpMode {
         armTarget = 890;
         if (AMotor.getCurrentPosition()>700){
             RotationScore();
-            slideTarget = 1400;
+            slideTarget = 1450;
         }
-        if (S1Motor.getCurrentPosition()>1300){
+        if (S1Motor.getCurrentPosition()>1400){
             WristOuttaking();
             return true;
         }else{
@@ -230,10 +229,31 @@ public class sampAuton2 extends OpMode {
         return AMotor.getCurrentPosition() < 270;
     }
 
+    public boolean ArmRestThird(){
+        RotationNormal();
+        WristPar();
+        slideTarget = 100;
+        if (S1Motor.getCurrentPosition()<120){
+            slow = true;
+            armTarget = 250;
+        }
+        return AMotor.getCurrentPosition()<270;
+    }
+
     public boolean ArmDownToGrab(){
         slow = true;
-        armTarget = 25;
-        return AMotor.getCurrentPosition() < 30;
+        armTarget = 15;
+        return AMotor.getCurrentPosition() < 20;
+    }
+    public boolean ArmRest(){
+        slow = true;
+        armTarget = 200;
+        return AMotor.getCurrentPosition()>180;
+    }
+
+    public boolean SlideThird(){
+        slideTarget = 325;
+        return S1Motor.getCurrentPosition()<335;
     }
 
 
@@ -268,18 +288,31 @@ public class sampAuton2 extends OpMode {
 
     public boolean LimelightOpen(){
         limelight.start();
+        WristPar();
         result = limelight.getLatestResult();
         if (result!= null){
-            double[] python = result.getPythonOutput();
-            double tx = result.getTx();
-            double ty = result.getTy();
+            python = result.getPythonOutput();
+            telemetry.addData("result", Arrays.toString(python));
+            double tx = python[6];
+            double ty = python[5]-8;
             double rawAngle = python[4];
             angle = (rawAngle >= 0) ? (1 - rawAngle / 180) : (-rawAngle / 180);
+            slideTarget = 230 + ty*2.2;
+            subPose = new Pose(follower.getPose().getX() + 6.7 - tx/4.2,follower.getPose().getY(),follower.getPose().getHeading()); // 6.7 - tx/4.5
+            sub1 = follower.pathBuilder()
+                    .addPath(new BezierLine(new Point(parkPose),new Point(subPose)))
+                    .setLinearHeadingInterpolation(parkPose.getHeading(),parkPose.getHeading())
+                    .build();
+            scoreSub1 = follower.pathBuilder()
+                    .addPath(new BezierLine(new Point(subPose),new Point(scorePose)))
+                    .setLinearHeadingInterpolation(subPose.getHeading(), scorePose.getHeading())
+                    .build();
+            if (S1Motor.getCurrentPosition()>slideTarget-20) {
+                limelight.pause();
+                return true;
+            }
 
-            return true;
-        }else{
-            return false;
-        }
+        }return false;
 
     }
     public void LimelightClose(){limelight.stop();}
@@ -411,11 +444,16 @@ public class sampAuton2 extends OpMode {
             case 1:
             case 6:
             case 11:
-            case 16:
-                if (stateTimer.getElapsedTimeSeconds() > 0.4) {
+            case 17:
+            case 25:
+                if (stateTimer.getElapsedTimeSeconds() > 0.2) {
                     ClawOpen();
-                    if (stateTimer.getElapsedTimeSeconds() > 0.7) {
-                        next();
+                    if (stateTimer.getElapsedTimeSeconds() > 0.4) {
+                        WristPar();
+                        if (stateTimer.getElapsedTimeSeconds()>0.5){
+                            next();
+                        }
+
                     }
                 }
                 break;
@@ -441,8 +479,8 @@ public class sampAuton2 extends OpMode {
 
             case 3:
             case 8:
-            case 13:
-                if (stateTimer.getElapsedTime() > .5) {
+            case 14:
+                if (stateTimer.getElapsedTime() > .7) {
                     if (ArmDownToGrab()) {
                         next();
                     }
@@ -451,7 +489,7 @@ public class sampAuton2 extends OpMode {
 
             case 4:
             case 9:
-            case 14:
+            case 15:
                 if (stateTimer.getElapsedTimeSeconds() > 0.3) {
                     ClawClose();
                     next();
@@ -461,6 +499,7 @@ public class sampAuton2 extends OpMode {
             case 5:
                 if (stateTimer.getElapsedTimeSeconds() > 0.3) {
                     if (!followerDone) {
+                        follower.setMaxPower(.6);
                         follower.followPath(scorePickup1, true);
                         followerDone = true;
                     }
@@ -481,10 +520,11 @@ public class sampAuton2 extends OpMode {
 
             case 7:
                 if (!followerDone) {
+                    follower.setMaxPower(1);
                     follower.followPath(grabPickup2, true);
                     followerDone = true;
                 }
-                if (ArmScoreToRest() && follower.headingError < 0.02) {
+                if (ArmScoreToRest() && follower.headingError < 0.025) {
                     if (!followerDoneDelay) {
                         followerDoneDelay = true;
                         stateTimer.resetTimer();
@@ -501,6 +541,7 @@ public class sampAuton2 extends OpMode {
             case 10:
                 if (stateTimer.getElapsedTimeSeconds() > 0.3) {
                     if (!followerDone) {
+                        follower.setMaxPower(.6);
                         follower.followPath(scorePickup2, true);
                         followerDone = true;
                     }
@@ -521,10 +562,12 @@ public class sampAuton2 extends OpMode {
 
             case 12:
                 if (!followerDone) {
+                    follower.setMaxPower(1);
                     follower.followPath(grabPickup3, true);
                     followerDone = true;
                 }
-                if (ArmScoreToRest() && follower.headingError < 0.02) {
+                if (ArmRestThird() && follower.headingError < 0.02) {
+                    RotationSpecial();
                     if (!followerDoneDelay) {
                         followerDoneDelay = true;
                         stateTimer.resetTimer();
@@ -537,10 +580,14 @@ public class sampAuton2 extends OpMode {
                     followerDoneDelay = false;
                 }
                 break;
-
-            case 15:
+            case 13:
+                if (SlideThird()){
+                    next();
+                }break;
+            case 16:
                 if (stateTimer.getElapsedTimeSeconds() > 0.3) {
                     if (!followerDone) {
+                        follower.setMaxPower(.6);
                         follower.followPath(scorePickup3, true);
                         followerDone = true;
                     }
@@ -559,12 +606,79 @@ public class sampAuton2 extends OpMode {
                 }
                 break;
 
-            case 17:
+            case 18:
+                if (follower.getPose().getY()<103){
+                    follower.setMaxPower(.5);
+                }else{
+                    follower.setMaxPower(1);
+                }
                 if (!followerDone) {
                     follower.followPath(park, true);
                     followerDone = true;
                 }
-                if (ArmScoreToRest() && follower.getPose().getY() < 99) {
+                if (ArmScoreToRest() && follower.getPose().getY() < 101) {
+                    if (!followerDoneDelay) {
+                        followerDoneDelay = true;
+                        stateTimer.resetTimer();
+                    } else if (stateTimer.getElapsedTimeSeconds() > 1) {
+                        followerDone = false;
+                        followerDoneDelay = false;
+                        next();
+                    }
+                } else {
+                    followerDoneDelay = false;
+                }
+                break;
+            case 19:
+                if (LimelightOpen()){
+                    next();
+                }break;
+            case 20:
+                if (!followerDone){
+                    RotationSub();
+                    follower.followPath(sub1);
+                }
+                if (follower.driveError<0.01){
+                    if (!followerDoneDelay){
+                        followerDoneDelay = true;
+                        stateTimer.resetTimer();
+                    }
+                    else if (stateTimer.getElapsedTimeSeconds()>1){
+                        followerDone = false;
+                        followerDoneDelay = false;
+                        next();
+                    }
+                }else {
+                    followerDoneDelay = false;
+                }break;
+            case 21:
+                if (stateTimer.getElapsedTimeSeconds()>1){
+                    if (ArmDownToGrab()){
+                        next();
+                    }
+                }break;
+            case 22:
+                if (stateTimer.getElapsedTimeSeconds()>.2){
+                    ClawClose();
+                    next();
+                }break;
+            case 23:
+                if (stateTimer.getElapsedTimeSeconds()>0.3) {
+                    if (ArmRest()) {
+                        next();
+                    }
+                }break;
+            case 24:
+                if (follower.getPose().getX() < 30) {
+                    follower.setMaxPower(.6);
+                } else {
+                    follower.setMaxPower(1);
+                }
+                if (!followerDone) {
+                    follower.followPath(scoreSub1, true);
+                    followerDone = true;
+                }
+                if (ArmRestToScore() && follower.getPose().getX() < 20) {
                     if (!followerDoneDelay) {
                         followerDoneDelay = true;
                         stateTimer.resetTimer();
@@ -577,6 +691,9 @@ public class sampAuton2 extends OpMode {
                     followerDoneDelay = false;
                 }
                 break;
+
+
+
 
 
 
@@ -599,6 +716,7 @@ public class sampAuton2 extends OpMode {
         // Feedback to Driver Hub
         telemetry.addData("state",state);
         telemetry.addData("busy",follower.isBusy());
+        telemetry.addData("result",Arrays.toString(python));
         telemetry.addData("arm",AMotor.getCurrentPosition());
         telemetry.addData("slide",S1Motor.getCurrentPosition());
         telemetry.addData("x", follower.getPose().getX());

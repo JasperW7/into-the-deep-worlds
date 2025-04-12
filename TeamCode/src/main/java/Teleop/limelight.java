@@ -105,7 +105,7 @@ public class limelight extends LinearOpMode { ;
 
         waitForStart();
         while (opModeIsActive()) {
-            wrist.setPosition(0.62);
+            wrist.setPosition(0.2);
             if (gamepad1.x) {
                 limelight.start();
                 result = limelight.getLatestResult();
